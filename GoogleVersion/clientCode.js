@@ -246,14 +246,30 @@ async function generateOutput()
 
     var routeName = document.getElementById("routeName").value.trim();
     var units = document.getElementById("inputUnits").value;
+    var mode = document.getElementById("inputMode").value;
     var advanceUnits = "meters";
-    if (units=="imperial") advanceUnits = "feet";
+    var pace = "kph";
+    var paceDefault = 25;
+    if (mode=="walking") {
+	pace = "minutes-per-kilometer";
+	paceDefault = 6;  //min per km
+    }
+    if (units=="imperial"){
+	advanceUnits = "feet";
+	pace = "mph"
+	paceDefault = 16;
+	if (mode=="walking"){
+	    pace = "minutes-per-mile";
+	    packetDefault = 10; //min per mile
+	}
+    }
 
     var doPrint = false;
     var doShow = false;
     
     if (theType=="directions"){
-	var speed = prompt(`Your average ${document.getElementById("inputMode").value} speed in ${units} units.`,12)
+	var speed = prompt(`Your average ${mode} speed in ${pace}.`,paceDefault)
+	if (pace.indexOf("minutes-per")>=0) speed = 60/speed;
 	const directions = directionsRenderer.getDirections();
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	    
 	//var data = {directions:directions};
@@ -276,7 +292,8 @@ async function generateOutput()
     
     if (theType=="denseGPX"){
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	    
-	var speed = prompt(`Your average ${document.getElementById("inputMode").value} speed in ${units} units.`,12)
+	var speed = prompt(`Your average ${mode} speed in ${pace}.`,paceDefault)
+	if (pace.indexOf("minutes-per")>=0) speed = 60/speed;
 	var data = {allPoints:allPoints,units:units,speed:speed};
 	var url = `http://localhost:8080/makeDenseGPX`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
@@ -286,7 +303,8 @@ async function generateOutput()
     
     if (theType=="tcx"){
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	    
-	var speed = prompt(`Your average ${document.getElementById("inputMode").value} speed in ${units} units.`,12);
+	var speed = prompt(`Your average ${mode} speed in ${pace}.`,paceDefault)
+	if (pace.indexOf("minutes-per")>=0) speed = 60/speed;
 	var advance = prompt(`Set turn warnings this many ${advanceUnits} in advance.`,300);
 	var data = {allPoints:allPoints,units:units,speed:speed,advance:advance,name:routeName};
 	var url = `http://localhost:8080/makeTCX`;
