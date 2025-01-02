@@ -9,7 +9,7 @@ async function initMap()
     const { Map } = await google.maps.importLibrary("maps");
     const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
 	"marker",
-    );
+    )
     
     map = new Map(document.getElementById('map'), {
         center: {lat: 42.3, lng: -71.3},
@@ -71,6 +71,16 @@ function showDirectionMarkers(){
     return;
 }
 
+//.......................................
+function lockRoute(){
+    if (document.getElementById("lockRoute").checked){
+	directionsRenderer.setOptions({draggable:false});
+    }
+    else{
+	directionsRenderer.setOptions({draggable:true});
+    }
+    return;
+}
 //........................................................................................
 async function doRL()
 {
