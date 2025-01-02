@@ -55,6 +55,7 @@ async function initMap()
 		}
 	    }
 	    showDirectionMarkers();
+	    try{rlPath.setMap(null);}catch(err){}
 	}
     });
     
