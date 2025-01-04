@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <title>RouteLoops using the OSM API</title>
+	
+    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+    
+    <style>
+      html, body {
+	  height: 100%;
+	  margin: 0;
+      }
+      .leaflet-container {
+	  height: 400px;
+	  width: 600px;
+	  max-width: 100%;
+	  max-height: 100%;
+      }
+    </style>
+    
+    <script src="https://unpkg.com/file-saver/dist/FileSaver.min.js"></script>
+    <script type="text/javascript" src="clientCode.js"></script>
+  </head>  
+  <body onload="initMap()">
+    <div id="inputs">
+      Location: <input type="text" value="02482 USA" id="inputLocation" size="40"/>
+      Dist: <input type="text" value="10" id="inputDist" size="3"/>
+      <!--Units:-->
+      <select id="inputUnits">
+	<option value="imperial" selected>Imperial (Miles)</option>
+	<option value="metric">Metric (Kilometers)</option>
+      </select>
+      <!--<input type="button" value="RL!" onclick="callRlApi()"/>-->
+      <input type="button" value="RouteLoop!" onclick="doRL()" style="background-color: #04AA6D;padding: 5px 5px;font-size: 14px;border-radius: 20%;color:white;"/>
+      <!--<input type="button" value="RL!" onclick="getDirections()" />-->
+      <br/>
+      Mode: <select id="inputMode">
+	<option value="driving-car">Car</option>
+	<option value="cycling-regular" selected>Bike</option>
+	<option value="cycling-road">Road Bike</option>
+	<option value="cycling-mountain">Mountain Bike</option>
+	<option value="cycling-electric">E-Bike</option>
+	<option value="foot-walking">Walking</option>
+	<option value="foot-hiking">Hiking</option>
+      </select> 
+      Fitness Level: <select id="fitnessLevel">
+	<option value=-1>Select</option>
+	<option value=0>Novice</option>
+	<option value=1 selected>Moderate</option>
+	<option value=2>Amateur</option>
+	<option value=3>Pro</option>
+      </select>
+      Green Factor <select id="greenFactor">
+	<option value=-1>Select</option>
+	<option value=0>Normal routing</option>
+	<option value=1 selected>Prefer green areas</option>
+      </select>
+      Quiet Factor <select id="quietFactor">
+	<option value=-1>Select</option>
+	<option value=0>Normal routing</option>
+	<option value=1 selected>Prefer quiet ways</option>
+      </select>
+      Rotation: <select id="inputRotation">
+	<option value="clockwise" selected>Clockwise</option>
+	<option value="counterclockwise">Counter-clockwise</option>
+      </select>
+      Direction: <select id="inputDirection">
+	<option value="0" selected>Random</option>
+	<option value="1">North</option>
+	<option value="2">Northeast</option>
+	<option value="3">East</option>
+	<option value="4">Southeast</option>
+	<option value="5">South</option>
+	<option value="6">Southwest</option>
+	<option value="7">West</option>
+	<option value="8">Northwest</option>
+      </select>
+      Path Method: <select id="method">
+	<option value="random" selected>Random</option>
+	<option value="circular">Circular</option>
+	<option value="rectangular">Rectangular</option>
+	<option value="figure8">Figure 8</option>
+	</select>
+      Avoid Highways: <select id="inputHighways">
+	<option value="yes" selected>Yes</option>
+	<option value="no">No</option>
+      </select>
+      Avoid Ferries: <select id="inputFerries">
+	<option value="yes" selected>Yes</option>
+	<option value="no">No</option>
+      </select>
+      
+    </div>
+    
+    <div id="map" style="height:90%; width:100%;"></div>
+    
+    <div id="outputs">
+      Status: <span id="status"></span>
+      Messages: <span id="messages"></span>
+      Distance: <span id="outDist"></span>
+      Start/End: <span id="outLoc"></span>
+      # Calcs: <span id="calcs"></span>
+      Route Name: <input type="text" placeHolder="Route Name" id="routeName" size="15"/>
+      Output: <select id="createOutput" onchange="generateOutput()">
+	<option value="none" selected>Select output format</option>
+	<option value="directions">Directions</option>
+	<option value="sparseGPX">Sparse GPX</option>
+	<option value="denseGPX">Dense GPX</option>
+	<option value="tcx">TCX</option>
+      </select>
+      Show Direction Markers <input type="checkbox" id="directionMarkers" onchange="showDirectionMarkers()"/>
+      Lock Route <input type="checkbox" id="lockRoute" onchange="lockRoute()"/>
+    </div>	  
+  </body>
+</html>
