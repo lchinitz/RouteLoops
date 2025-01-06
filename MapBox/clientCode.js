@@ -2,6 +2,7 @@ var map,RoutingControl;
 var rlPath,rawPath,guidepointPath;
 var allPoints;
 var directionMarkers = [];
+const { protocol, hostname, port } = window.location;
 
 async function initMap()
 {
@@ -68,7 +69,7 @@ async function doRL()
     var encoded = encodeURI(theLocation);
 
     //Geocode this starting location in to a Lat/Lng pair.
-    var url = `http://localhost:8080/geocode?location=${encoded}`;
+    var url = `http://${hostname}:${port}/geocode?location=${encoded}`;
     var theResp = await fetch(url);
     var theJson = await theResp.json();    
     var theLatLng = {lat:theJson.features[0].geometry.coordinates[1],lng:theJson.features[0].geometry.coordinates[0]};
@@ -81,7 +82,7 @@ async function doRL()
     var theUnits    = document.getElementById("inputUnits").value;
     var theRotation  = document.getElementById("inputRotation").value;
     var theDirection= document.getElementById("inputDirection").value;    
-    var url = `http://localhost:8080/getRLpoints?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
+    var url = `http://${hostname}:${port}/getRLpoints?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
     url += `&dist=${theDistance}&units=${theUnits}&rotation=${theRotation}&direction=${theDirection}`;
     var theMethod= document.getElementById("method").value;    
     url += `&method=${theMethod}`;
@@ -114,7 +115,7 @@ async function doRL()
     var theMode       = document.getElementById("inputMode").value;
     var inputHighways = document.getElementById("inputHighways").value;    
     var inputFerries  = document.getElementById("inputFerries").value;    
-    var url = `http://localhost:8080/directions?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
+    var url = `http://${hostname}:${port}/directions?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
     url += `&mode=${theMode}`;
     url += `&highways=${inputHighways}&ferries=${inputFerries}`;
     var waypointText= "";
@@ -154,7 +155,7 @@ async function doRL()
 
 	//Take allPoints and clean up the path.
 	var data = {LLs:allPoints};
-	var url = `http://localhost:8080/cleanTails`;
+	var url = `http://${hostname}:${port}/cleanTails`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var cleanTailsJson = await theResp.json();
 
@@ -178,7 +179,7 @@ async function doRL()
 	    for (const waypoint of newWaypoints) waypoints.push(waypoint);
 
 	    //Generate a new path based on this new set of waypoints.
-	    var url = `http://localhost:8080/directions?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
+	    var url = `http://${hostname}:${port}/directions?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
 	    url += `&mode=${theMode}&highways=${inputHighways}&ferries=${inputFerries}`;
 	    var waypointText= "";
 	    for (const waypoint of waypoints) waypointText += `${waypoint.lat},${waypoint.lng}|`;
@@ -290,7 +291,7 @@ async function generateOutput()
 	if (pace.indexOf("minutes-per")>=0) speed = 60/speed;
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	    
 	var data = {allPoints:allPoints,units:units,speed:speed};
-	var url = `http://localhost:8080/showDirections`;
+	var url = `http://${hostname}:${port}/showDirections`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();	
 	doPrint = confirm("Print it?");
@@ -300,7 +301,7 @@ async function generateOutput()
     if (theType=="sparseGPX"){
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	    
 	var data = {allPoints:allPoints};
-	var url = `http://localhost:8080/makeSparseGPX`;
+	var url = `http://${hostname}:${port}/makeSparseGPX`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();
 	doPrint = true;
@@ -311,7 +312,7 @@ async function generateOutput()
 	var speed = prompt(`Your average ${mode} speed in ${pace}.`,paceDefault)
 	if (pace.indexOf("minutes-per")>=0) speed = 60/speed;
 	var data = {allPoints:allPoints,units:units,speed:speed};
-	var url = `http://localhost:8080/makeDenseGPX`;
+	var url = `http://${hostname}:${port}/makeDenseGPX`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();
 	doPrint = true;
@@ -323,7 +324,7 @@ async function generateOutput()
 	if (pace.indexOf("minutes-per")>=0) speed = 60/speed;
 	var advance = prompt(`Set turn warnings this many ${advanceUnits} in advance.`,300);
 	var data = {allPoints:allPoints,units:units,speed:speed,advance:advance,name:routeName};
-	var url = `http://localhost:8080/makeTCX`;
+	var url = `http://${hostname}:${port}/makeTCX`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();
 	doPrint = true;
