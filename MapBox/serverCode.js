@@ -1223,7 +1223,7 @@ function addWaypoint(req,res,next){
 	else{
 	    for (var i=0;i<waypoints.length-1;i++){
 		if (closest.index>waypoints[i].closest.index && closest.index<waypoints[i+1].closest.index){
-		    putItAt = i;
+		    putItAt = i+1;
 		    break;
 		}
 	    }
