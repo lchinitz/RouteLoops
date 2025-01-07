@@ -24,7 +24,7 @@ async function initMap()
 	mapId: "DemoMap"
     });
 
-    google.maps.event.addListener(map, "rightclick", function(event) {
+    google.maps.event.addListener(map, "click", function(event) {
 	var lat = event.latLng.lat();
 	var lng = event.latLng.lng();
 	if (doRemoval) doRemoveWaypoint(lat,lng);
@@ -430,7 +430,7 @@ function removeWaypoint(){
     if (currentWaypoints.length==0) return;
     else{
 	doRemoval = true;
-	alert('Right-Click on the route on, or near, the waypoint you want to remove.');
+	alert('Click on the route on, or near, the waypoint you want to remove.');
 	return;
     }
 }

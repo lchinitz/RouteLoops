@@ -28,6 +28,7 @@ app.post('/showDirections',showDirections);
 app.post('/makeSparseGPX',makeSparseGPX);
 app.post('/makeDenseGPX',makeDenseGPX);
 app.post('/makeTCX',makeTCX);
+app.post('/removeWaypoint',removeWaypoint);
 
 // Setup Server
 app.listen(8080, function () {
@@ -1146,4 +1147,32 @@ function cleanUp(text)
     }
   
   return cleaned;
+}
+
+//..............................................................
+function removeWaypoint(req,res,next){
+    var method = req.method;
+    var url = req.url;
+    if (method.toLowerCase() == 'get'){
+    }
+    
+    else if (method.toLowerCase() == 'post'){
+	
+	var body = req.body;
+	var lat = body.lat;
+	var lng = body.lng;
+	var waypoints = body.waypoints;
+
+	var closest = null;
+	for (var i=0;i<waypoints.length;i++){
+	    const point = waypoints[i];
+	    var separation = Math.pow((lat-point.lat),2) + Math.pow((lng-point.lng),2)
+	    if (closest==null) closest = {point:point,separation:separation,index:i};
+	    if (separation < closest.separation) closest = {point:point,separation:separation,index:i};
+	}
+
+	waypoints.splice(closest.index,1);
+
+	res.json({closest:closest,modifiedWaypoints:waypoints});
+    }
 }
