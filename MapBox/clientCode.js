@@ -5,6 +5,7 @@ var rlPath,rawPath,guidepointPath;
 var allPoints;
 var currentWaypoints=[];
 var doRemoval = false;
+var doAdd = false;
 var directionMarkers = [], waypointMarkers = [];
 const { protocol, hostname, port } = window.location;
 
@@ -27,6 +28,7 @@ async function initMap()
 	var lat = event.lngLat.lat;
 	var lng = event.lngLat.lng;
 	if (doRemoval) doRemoveWaypoint(lat,lng);	
+	if (doAdd) doAddWaypoint(lat,lng);	
     });        
     
 }
@@ -90,7 +92,8 @@ async function doRL(waypointsIn)
     var theLatLng = {lat:theJson.features[0].geometry.coordinates[1],lng:theJson.features[0].geometry.coordinates[0]};
 
     //Center the map on this location.
-    map.setCenter([theLatLng.lng,theLatLng.lat]);
+    if (typeof waypointsIn == "undefined")
+	map.setCenter([theLatLng.lng,theLatLng.lat]);
 
     var initialWaypoints = [];
     if (typeof waypointsIn == "undefined"){
@@ -131,7 +134,8 @@ async function doRL(waypointsIn)
 
     //Get a bounding box used to zoom the map to a more reasonable size.
     try{
-	map.fitBounds(guidePoints,{padding:{top:10,bottom:10,left:10,rights:10}});
+	if (typeof waypointsIn == "undefined")
+	    map.fitBounds(guidePoints,{padding:{top:10,bottom:10,left:10,rights:10}});
     }
     catch(err){}
 
@@ -248,7 +252,7 @@ async function doRL(waypointsIn)
 	    }
 	}
     });
-    map.addLayer({id:'rlPointsFill',type:'fill',source:'rlPoints',layout:{},paint:{'fill-color':'red','fill-opacity':0.5}});
+    //map.addLayer({id:'rlPointsFill',type:'fill',source:'rlPoints',layout:{},paint:{'fill-color':'red','fill-opacity':0.5}});
     map.addLayer({id:'rlPointsLine',type:'line',source:'rlPoints',layout:{},paint:{'line-color':'red','line-width':2}});
 
     //Also, direction markers.
@@ -286,9 +290,10 @@ async function doRL(waypointsIn)
     var theIndex = 0;
     for (const point of currentWaypoints){
 	var theColor = "green";	
-	var marker = new mapboxgl.Marker({color:theColor})
+	var marker = new mapboxgl.Marker({color:theColor,draggable:true})
 	    .setLngLat([point.lng,point.lat])
-	    .setPopup(new mapboxgl.Popup().setText(`Waypoint ${theIndex}`))
+	    .setPopup(new mapboxgl.Popup().setText(`Waypoint _${theIndex}_`))
+	marker.on('dragend', onMarkerDragEnd);
 	marker.addTo(map);
 	waypointMarkers.push(marker)
 	theIndex += 1;
@@ -448,3 +453,48 @@ async function doRemoveWaypoint(lat,lng){
 
     return;
 }
+
+//.............................................................
+function onMarkerDragEnd(event){
+
+    const marker = event.target;
+    const lngLat = marker.getLngLat();
+    //alert(lngLat);
+    const popUp = marker.getPopup();
+    const text = popUp["_content"].textContent;
+    const split = text.split("_");
+    const wpnum = split[1];
+    //alert(wpnum);
+
+    //Move this waypoint to the dragged location.
+    currentWaypoints[wpnum] = {lat:lngLat.lat, lng:lngLat.lng};
+    doRL(currentWaypoints);
+    
+    return;
+}
+
+//..................................................................
+function addWaypoint(){
+    if (allPoints.length==0) return;
+    else{
+	doAdd = true;
+	alert('Click on the route on, or near, the location where you want a new waypoint.');
+	return;
+    }
+}
+//................................................................
+async function doAddWaypoint(lat,lng){
+    
+    var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
+    var data = {lat:lat,lng:lng,waypoints:currentWaypoints,allPoints:allPoints};
+    var url = `http://${hostname}:${port}/addWaypoint`;
+    var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+    var theJson = await theResp.json();
+    doAdd = false;
+
+    currentWaypoints = JSON.parse(JSON.stringify(theJson.modifiedWaypoints));
+    doRL(currentWaypoints);
+
+    return;
+}
+

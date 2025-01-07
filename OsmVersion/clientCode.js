@@ -132,7 +132,8 @@ async function doRL(waypointsIn)
     var theLatLng = {lat:theJson.features[0].geometry.coordinates[1],lng:theJson.features[0].geometry.coordinates[0]};
 
     //Center the map on this location.
-    map.setView(new L.LatLng(theLatLng.lat,theLatLng.lng),18);
+    if (typeof waypointsIn == "undefined")
+	map.setView(new L.LatLng(theLatLng.lat,theLatLng.lng),18);
 
     var initialWaypoints = [];
     if (typeof waypointsIn == "undefined"){    
@@ -165,7 +166,8 @@ async function doRL(waypointsIn)
 
     //Get a bounding box used to zoom the map to a more reasonable size.
     const RLBounds = guidepointPath.getBounds();
-    map.fitBounds(RLBounds);
+    if (typeof waypointsIn == "undefined")
+	map.fitBounds(RLBounds);
 
     //Call the directions service using the guide point as waypoints.
     var theMode       = document.getElementById("inputMode").value;
