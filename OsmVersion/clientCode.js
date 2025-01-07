@@ -2,6 +2,7 @@ var map,RoutingControl;
 var rlPath,rawPath,guidepointPath;
 var allPoints;
 var currentWaypoints=[];
+var doRemoval = false;
 var directionMarkers = [];
 const { protocol, hostname, port } = window.location;
 
@@ -13,6 +14,13 @@ async function initMap()
     window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
 
     map = L.map('map').setView([42.3, -71.3], 8);
+
+    map.on('click', function(event) {
+	//alert(event.latlng);
+	var lat = event.latlng.lat;
+	var lng = event.latlng.lng;
+	if (doRemoval) doRemoveWaypoint(lat,lng);	
+    });    
     
     const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 	maxZoom: 18,
@@ -402,4 +410,28 @@ function reverseRoute(){
 	doRL(currentWaypoints);
 	return;
     }
+}
+//..................................................................
+function removeWaypoint(){
+    if (currentWaypoints.length==0) return;
+    else{
+	doRemoval = true;
+	alert('Click on the route on, or near, the waypoint you want to remove.');
+	return;
+    }
+}
+//................................................................
+async function doRemoveWaypoint(lat,lng){
+    
+    var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
+    var data = {lat:lat,lng:lng,waypoints:currentWaypoints};
+    var url = `http://${hostname}:${port}/removeWaypoint`;
+    var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+    var theJson = await theResp.json();
+    doRemoval = false;
+
+    currentWaypoints = JSON.parse(JSON.stringify(theJson.modifiedWaypoints));
+    doRL(currentWaypoints);
+
+    return;
 }

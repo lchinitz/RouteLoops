@@ -1,8 +1,11 @@
+// Be sure to include a valid accessToken
+
 var map,RoutingControl;
 var rlPath,rawPath,guidepointPath;
 var allPoints;
 var currentWaypoints=[];
-var directionMarkers = [];
+var doRemoval = false;
+var directionMarkers = [], waypointMarkers = [];
 const { protocol, hostname, port } = window.location;
 
 async function initMap()
@@ -12,12 +15,19 @@ async function initMap()
     var announcementURL = `http://${hostname}:${port}/announcement.html`;
     window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
 
-    mapboxgl.accessToken = 'YOUR VALID MAPBOX ACCESS TOKEN';
+    mapboxgl.accessToken = 'valid access token';
     map = new mapboxgl.Map({
         container: 'map', // container ID
         center: [-71.3, 42.3], // starting position [lng, lat]. Note that lat must be set between -90 and 90
         zoom: 9 // starting zoom
     });
+
+    map.on('click', function(event) {
+	//alert(event.lngLat);
+	var lat = event.lngLat.lat;
+	var lng = event.lngLat.lng;
+	if (doRemoval) doRemoveWaypoint(lat,lng);	
+    });        
     
 }
 //--------------------------------------
@@ -120,7 +130,10 @@ async function doRL(waypointsIn)
     map.addLayer({id:'guidePointsLine',type:'line',source:'guidePoints',layout:{},paint:{'line-color':'green','line-width':2}});
 
     //Get a bounding box used to zoom the map to a more reasonable size.
-    map.fitBounds(guidePoints,{padding:{top:10,bottom:10,left:10,rights:10}});
+    try{
+	map.fitBounds(guidePoints,{padding:{top:10,bottom:10,left:10,rights:10}});
+    }
+    catch(err){}
 
     //Call the directions service using the guide point as waypoints.
     var theMode       = document.getElementById("inputMode").value;
@@ -267,6 +280,20 @@ async function doRL(waypointsIn)
 
     currentWaypoints = JSON.parse(JSON.stringify(waypoints));    
 
+    //Also, waypoint markers
+    for (const marker of waypointMarkers) marker.remove();
+    waypointMarkers.length=0;
+    var theIndex = 0;
+    for (const point of currentWaypoints){
+	var theColor = "green";	
+	var marker = new mapboxgl.Marker({color:theColor})
+	    .setLngLat([point.lng,point.lat])
+	    .setPopup(new mapboxgl.Popup().setText(`Waypoint ${theIndex}`))
+	marker.addTo(map);
+	waypointMarkers.push(marker)
+	theIndex += 1;
+    }
+    
     return;
 }
 
@@ -396,4 +423,28 @@ function reverseRoute(){
 	doRL(currentWaypoints);
 	return;
     }
+}
+//..................................................................
+function removeWaypoint(){
+    if (currentWaypoints.length==0) return;
+    else{
+	doRemoval = true;
+	alert('Click on the route on, or near, the waypoint you want to remove.');
+	return;
+    }
+}
+//................................................................
+async function doRemoveWaypoint(lat,lng){
+    
+    var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
+    var data = {lat:lat,lng:lng,waypoints:currentWaypoints};
+    var url = `http://${hostname}:${port}/removeWaypoint`;
+    var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+    var theJson = await theResp.json();
+    doRemoval = false;
+
+    currentWaypoints = JSON.parse(JSON.stringify(theJson.modifiedWaypoints));
+    doRL(currentWaypoints);
+
+    return;
 }

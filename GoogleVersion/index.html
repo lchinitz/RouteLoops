@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!--include a valid API key -->
+<!--set location as desired -->
 <html>
   <head>
     <title>RouteLoops using the Google Maps API</title>
@@ -17,13 +19,13 @@
         padding: 0;
       }
     </style>
-    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=INSERT VALID GOOGLE MAPS API KEY HERE&loading=async"></script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=A Valid Google Maps API Key&loading=async"></script>
     <script src="https://unpkg.com/file-saver/dist/FileSaver.min.js"></script>
     <script type="text/javascript" src="clientCode.js"></script>
   </head>  
   <body onload="initMap()">
     <div id="inputs">
-      Location: <input type="text" value="02482 USA" id="inputLocation" size="40"/>
+      Location: <input type="text" value="Wellesley MA, 02482 USA" id="inputLocation" size="40"/>
       Dist: <input type="text" value="10" id="inputDist" size="3"/>
       <!--Units:-->
       <select id="inputUnits">
@@ -89,6 +91,7 @@
       Show Direction Markers <input type="checkbox" id="directionMarkers" onchange="showDirectionMarkers()"/>
       Lock Route <input type="checkbox" id="lockRoute" onchange="lockRoute()"/>
       <input type="button" id="reverseRoute" onclick="reverseRoute()" value="Reverse Route" />
+      <input type="button" id="removeWaypoint" onclick="removeWaypoint()" value="Remove Waypoint" />
     </div>	  
   </body>
 </html>

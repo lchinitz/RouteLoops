@@ -2,6 +2,7 @@ var map,directionsService,directionsRenderer;
 var rlPath,rawPath,guidepointPath;
 var allPoints;
 var currentWaypoints=[];
+var doRemoval = false;
 var directionMarkers = [];
 const { protocol, hostname, port } = window.location;
 
@@ -22,6 +23,12 @@ async function initMap()
         zoom: 8,
 	mapId: "DemoMap"
     });
+
+    google.maps.event.addListener(map, "rightclick", function(event) {
+	var lat = event.latLng.lat();
+	var lng = event.latLng.lng();
+	if (doRemoval) doRemoveWaypoint(lat,lng);
+    });    
 
     const infoWindow = new google.maps.InfoWindow({
 	content: null
@@ -417,4 +424,28 @@ function reverseRoute(){
 	doRL(currentWaypoints);
 	return;
     }
+}
+//..................................................................
+function removeWaypoint(){
+    if (currentWaypoints.length==0) return;
+    else{
+	doRemoval = true;
+	alert('Right-Click on the route on, or near, the waypoint you want to remove.');
+	return;
+    }
+}
+//................................................................
+async function doRemoveWaypoint(lat,lng){
+    
+    var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
+    var data = {lat:lat,lng:lng,waypoints:currentWaypoints};
+    var url = `http://${hostname}:${port}/removeWaypoint`;
+    var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+    var theJson = await theResp.json();
+    doRemoval = false;
+
+    currentWaypoints = JSON.parse(JSON.stringify(theJson.modifiedWaypoints));
+    doRL(currentWaypoints);
+
+    return;
 }

@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Replace Location with desired -->
+<!-- Make sure clientCode has a valid API token -->
 <html>
   <head>
     <base target="_top">
@@ -26,7 +28,7 @@
     </style>
         
     <script src="https://unpkg.com/file-saver/dist/FileSaver.min.js"></script>
-    <script type="text/javascript" src="clientCode-DoNotPush.js"></script>
+    <script type="text/javascript" src="clientCode.js"></script>
   </head>  
   <body onload="initMap()">
     <div id="inputs">
@@ -98,6 +100,7 @@
       Show Direction Markers <input type="checkbox" id="directionMarkers" onchange="showDirectionMarkers()"/>
       <!--Lock Route <input type="checkbox" id="lockRoute" onchange="lockRoute()"/>-->
       <input type="button" id="reverseRoute" onclick="reverseRoute()" value="Reverse Route" />      
+      <input type="button" id="removeWaypoint" onclick="removeWaypoint()" value="Remove Waypoint" />
     </div>	  
   </body>
 </html>

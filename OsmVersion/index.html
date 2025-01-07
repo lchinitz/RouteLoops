@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Replace inputLocation with desired -->
 <html>
   <head>
     <base target="_top">
@@ -34,7 +35,7 @@
   </head>  
   <body onload="initMap()">
     <div id="inputs">
-      Location: <input type="text" value="02482 USA" id="inputLocation" size="40"/>
+      Location: <input type="text" value="Wellesley MA 02482 USA" id="inputLocation" size="40"/>
       Dist: <input type="text" value="10" id="inputDist" size="3"/>
       <!--Units:-->
       <select id="inputUnits">
@@ -122,6 +123,7 @@
       Show Direction Markers <input type="checkbox" id="directionMarkers" onchange="showDirectionMarkers()"/>
       Lock Route <input type="checkbox" id="lockRoute" onchange="lockRoute()"/>
       <input type="button" id="reverseRoute" onclick="reverseRoute()" value="Reverse Route" />
+      <input type="button" id="removeWaypoint" onclick="removeWaypoint()" value="Remove Waypoint" />      
     </div>	  
   </body>
 </html>
