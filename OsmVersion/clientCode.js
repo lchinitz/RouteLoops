@@ -6,6 +6,10 @@ const { protocol, hostname, port } = window.location;
 
 async function initMap()
 {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    var announcementURL = `http://${hostname}:${port}/announcement.html`;
+    window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
 
     map = L.map('map').setView([42.3, -71.3], 8);
     
@@ -57,10 +61,21 @@ async function initMap()
     
     
 }
+//--------------------------------------
+function displayMarker(index){
+    if (index<directionMarkers.length){
+	var marker = directionMarkers[index];
+	marker.addTo(map);
+	index+=1;
+	if (index<directionMarkers.length) setTimeout( ()=> {displayMarker(index)},200);
+    }
+    return;
+}
 //.......................................
 function showDirectionMarkers(){
     if (document.getElementById("directionMarkers").checked){
-	for (const marker of directionMarkers) marker.addTo(map);
+	//for (const marker of directionMarkers) marker.addTo(map);
+	displayMarker(0);
     }
     else{
 	for (const marker of directionMarkers) map.removeLayer(marker);

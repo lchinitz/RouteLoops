@@ -6,6 +6,11 @@ const { protocol, hostname, port } = window.location;
 
 async function initMap()
 {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    var announcementURL = `http://${hostname}:${port}/announcement.html`;
+    window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
+    
 
     mapboxgl.accessToken = 'YOUR VALID MAPBOX ACCESS TOKEN';
     map = new mapboxgl.Map({
