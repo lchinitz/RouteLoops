@@ -32,8 +32,9 @@ app.post('/removeWaypoint',removeWaypoint);
 app.get('/readFile',readFile);
 
 // Setup Server
-app.listen(8080, function () {
-    console.log('Server has been started and is listening on port 8080');
+const thePort = 8080;
+app.listen(thePort, function () {
+    console.log(`Server has been started and is listening on port ${thePort}`);
 });
 
 //.......................................................................
