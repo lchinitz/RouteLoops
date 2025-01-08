@@ -13,10 +13,20 @@ async function initMap()
 {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    var announcementURL = `http://${hostname}:${port}/announcement.html`;
-    window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
+    //var announcementURL = `http://${hostname}:${port}/announcement.html`;
+    //window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
+    var url = `http://${hostname}:${port}/readFile?fileName=announcement.html`;
+    var theResp = await fetch(url);
+    var theJson = await theResp.json();    
+    var theHTML = theJson.contents;
+    document.getElementById("innerAnnounce").innerHTML = theHTML;
+    document.getElementById("announceDiv").style.height = `${height*0.95}px`;
+    document.getElementById("announceDiv").style.width = `${width*0.60}px`;
+    document.getElementById("announceDiv").style.left = `${300}px`;
+    document.getElementById("announceDiv").style.top = `${50}px`;
+   
 
-    mapboxgl.accessToken = 'valid access token';
+    mapboxgl.accessToken = 'A Valid Access Token';
     map = new mapboxgl.Map({
         container: 'map', // container ID
         center: [-71.3, 42.3], // starting position [lng, lat]. Note that lat must be set between -90 and 90
@@ -272,7 +282,8 @@ async function doRL(waypointsIn)
     }
     
     //Remove the other lines if that's desired.
-    var yes = confirm("Remove other lines?");
+    //var yes = confirm("Remove other lines?");
+    var yes = true;
     if (yes){
 	map.removeLayer('guidePointsFill');
 	map.removeLayer('guidePointsLine');

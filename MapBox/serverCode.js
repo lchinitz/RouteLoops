@@ -30,6 +30,7 @@ app.post('/makeDenseGPX',makeDenseGPX);
 app.post('/makeTCX',makeTCX);
 app.post('/removeWaypoint',removeWaypoint);
 app.post('/addWaypoint',addWaypoint);
+app.get('/readFile',readFile);
 
 // Setup Server
 app.listen(8080, function () {
@@ -1240,3 +1241,42 @@ function addWaypoint(req,res,next){
     }
 }
  
+//.........................................................................
+async function readFile(req,res,next)
+{
+
+    var method = req.method;
+    var url = req.url;
+    
+    if (method.toLowerCase() == 'get'){
+        //console.log('url ' + url);
+        var split1 = url.split('?');
+        var result = {fileName:null};
+        if(split1.length>1){
+	    var query = split1[1];
+	    var split2 = query.split('&');
+	    for(var i=0;i<split2.length;i++)
+	    {
+                var split3 = split2[i].split('=');
+                if(split3[0] == 'fileName')      result.fileName      = split3[1];
+	    }
+	}
+	var status = "NG";
+	var data = null;
+	if (result.fileName != null){
+	    try {
+		data = fs.readFileSync(`./${result.fileName}`, 'utf8');
+		//console.log(data);		
+	    } catch (err) {
+		console.error(err);
+	    }
+	}
+
+	if (data!=null)status = "OK";
+	res.json({status:status, contents:data});
+    }
+
+    else if (method.toLowerCase() == 'post'){
+    }
+}
+    

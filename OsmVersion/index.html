@@ -45,6 +45,10 @@
       <!--<input type="button" value="RL!" onclick="callRlApi()"/>-->
       <input type="button" value="RouteLoop!" onclick="doRL()" style="background-color: #04AA6D;padding: 5px 5px;font-size: 14px;border-radius: 20%;color:white;"/>
       <!--<input type="button" value="RL!" onclick="getDirections()" />-->
+      &nbsp;&nbsp;
+      <span style="font-size:26px; background-color:yellow; color:black;" >
+	Distance:  <span id="outDist"></span> <span id="distUnits"></span>
+      </span>      
       <br/>
       Mode: <select id="inputMode">
 	<option value="driving-car">Car</option>
@@ -104,14 +108,15 @@
       
     </div>
     
-    <div id="map" style="height:90%; width:100%;"></div>
+    <div id="map" style="height:87%; width:100%; z-index:-1;"></div>
     
     <div id="outputs">
-      Status: <span id="status"></span>
-      Messages: <span id="messages"></span>
-      Distance: <span id="outDist"></span>
-      Start/End: <span id="outLoc"></span>
-      # Calcs: <span id="calcs"></span>
+      <span style="display:none;">
+	Status: <span id="status"></span>
+	Messages: <span id="messages"></span>
+	# Calcs: <span id="calcs"></span>
+	Start/End: <span id="outLoc"></span>
+      </span>
       Route Name: <input type="text" placeHolder="Route Name" id="routeName" size="15"/>
       Output: <select id="createOutput" onchange="generateOutput()">
 	<option value="none" selected>Select output format</option>
@@ -124,6 +129,12 @@
       Lock Route <input type="checkbox" id="lockRoute" onchange="lockRoute()"/>
       <input type="button" id="reverseRoute" onclick="reverseRoute()" value="Reverse Route" />
       <input type="button" id="removeWaypoint" onclick="removeWaypoint()" value="Remove Waypoint" />      
-    </div>	  
+    </div>
+    
+    <div id="announceDiv" style="position:absolute; left:100px; top:20px;">
+      <center><input type="button" id="closeAnnouce" value="close" onclick="closeAnnounce()" style="background-color:red;padding: 5px 5px;font-size:12px;border-radius: 40%;color:black;"/></center>
+      <div id="innerAnnounce"></div>
+    </div>
+    <script> function closeAnnounce() {document.getElementById("announceDiv").style.display = "none";document.getElementById("map").style["z-index"] = ""} </script>    
   </body>
 </html>
