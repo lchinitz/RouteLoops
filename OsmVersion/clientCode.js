@@ -1,3 +1,5 @@
+//Include valid tokens for routers, if required.
+
 var map,RoutingControl;
 var rlPath,rawPath,guidepointPath;
 var allPoints;
@@ -37,11 +39,22 @@ async function initMap()
     }).addTo(map);
 
     var theMode       = document.getElementById("inputMode").value;
+    const theRouter = "MapBox";
+    var routerToUse = null;
+    if (theRouter=="OSM") routerToUse = new L.Routing.OSRMv1({"profile": `${theMode}`});
+    if (theRouter=="MapBox"){
+	var theToken = 'A Valid Token';
+	var theProfile = "cycling";
+	if (theMode.indexOf("driving")>=0) theProfile = "driving";
+	if (theMode.indexOf("cycling")>=0) theProfile = "cycling";
+	if (theMode.indexOf("walking")>=0) theProfile = "walking";
+	if (theMode.indexOf("foot")>=0) theProfile = "walking";
+	routerToUse = new L.Routing.mapbox(theToken,{profile:`mapbox/${theProfile}`});
+    }
     RoutingControl = L.Routing.control({
 	waypoints:[],
 	lineOptions: {styles: [{color: 'black', opacity: 1, weight: 5}]},
-	router: new L.Routing.OSRMv1({
-            "profile": `${theMode}`}),
+	router: routerToUse				     
     }).addTo(map);
     
     RoutingControl.on("routesfound", async (response) => {
