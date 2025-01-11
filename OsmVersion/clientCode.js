@@ -6,6 +6,7 @@ var allPoints;
 var currentWaypoints=[];
 var doRemoval = false;
 var directionMarkers = [];
+var homeMarker;
 const { protocol, hostname, port } = window.location;
 
 async function initMap()
@@ -43,7 +44,7 @@ async function initMap()
     var routerToUse = null;
     if (theRouter=="OSM") routerToUse = new L.Routing.OSRMv1({"profile": `${theMode}`});
     if (theRouter=="MapBox"){
-	var theToken = 'A Valid Token';
+	var theToken = 'A Valid Token for MapBox';
 	var theProfile = "cycling";
 	if (theMode.indexOf("driving")>=0) theProfile = "driving";
 	if (theMode.indexOf("cycling")>=0) theProfile = "cycling";
@@ -90,7 +91,8 @@ async function initMap()
 	    if (point.hasOwnProperty("instructions")){
 		countInstructions += 1;
 		point.count = countInstructions;
-		var marker = new L.Marker([point.lat, point.lng],{title:`${countInstructions}: ${point.instructions}`});
+		var useInstruction = `${countInstructions}: ${point.instructions}`;
+		var marker = new L.Marker([point.lat, point.lng],{title:useInstruction});
 		marker.addTo(map);
 		directionMarkers.push(marker);
 	    }
@@ -142,6 +144,7 @@ async function doRL(waypointsIn)
     try{map.removeLayer(rlPath);}catch(err){}
     try{map.removeLayer(rawPath);}catch(err){}
     try{map.removeLayer(guidepointPath);}catch(err){}
+    try{homeMarker.remove();}catch(err){}
     
     //Find the starting point of the RouteLoop
     var theLocation = document.getElementById("inputLocation").value;
@@ -156,6 +159,13 @@ async function doRL(waypointsIn)
     //Center the map on this location.
     if (typeof waypointsIn == "undefined")
 	map.setView(new L.LatLng(theLatLng.lat,theLatLng.lng),18);
+
+    //Put a house marker at the start/end point.
+    var homeIcon = L.icon({
+	iconUrl: './images/Home.png'	
+    });
+
+    homeMarker = L.marker([theLatLng.lat, theLatLng.lng], {icon: homeIcon,draggable:true,title:theLocation}).addTo(map);
 
     var initialWaypoints = [];
     if (typeof waypointsIn == "undefined"){    

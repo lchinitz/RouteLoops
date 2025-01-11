@@ -4,6 +4,7 @@ var allPoints;
 var currentWaypoints=[];
 var doRemoval = false;
 var directionMarkers = [];
+var homeMarker;
 const { protocol, hostname, port } = window.location;
 
 async function initMap()
@@ -140,6 +141,7 @@ async function doRL(waypointsIn)
     try{rlPath.setMap(null);}catch(err){}
     try{rawPath.setMap(null);}catch(err){}
     try{guidepointPath.setMap(null);}catch(err){}
+    try{homeMarker.map = null;}catch(err){}
     
     //Find the starting point of the RouteLoop
     var theLocation = document.getElementById("inputLocation").value;
@@ -154,6 +156,22 @@ async function doRL(waypointsIn)
     //Center the map on this location.
     if (typeof waypointsIn == "undefined")
 	map.setCenter(theLatLng);
+
+    //Put a house marker at the start/end point.
+    const { Map } = await google.maps.importLibrary("maps");
+    const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
+	"marker",
+    )
+    const homeImg = document.createElement("img");    
+    homeImg.src = `http://${hostname}:${port}/images/Home.png`;
+    
+    homeMarker = new AdvancedMarkerElement({
+	map,
+	position: { lat: theLatLng.lat, lng: theLatLng.lng },
+	content: homeImg,
+	title: theLocation,
+	gmpDraggable:true
+    });
 
     var initialWaypoints = [];
     if (typeof waypointsIn == "undefined"){

@@ -7,6 +7,7 @@ var currentWaypoints=[];
 var doRemoval = false;
 var doAdd = false;
 var directionMarkers = [], waypointMarkers = [];
+var homeMarker;
 const { protocol, hostname, port } = window.location;
 
 async function initMap()
@@ -26,7 +27,7 @@ async function initMap()
     document.getElementById("announceDiv").style.top = `${50}px`;
    
 
-    mapboxgl.accessToken = 'A Valid Access Token';
+    mapboxgl.accessToken = 'A Valid Token';
     map = new mapboxgl.Map({
         container: 'map', // container ID
         center: [-71.3, 42.3], // starting position [lng, lat]. Note that lat must be set between -90 and 90
@@ -90,6 +91,7 @@ async function doRL(waypointsIn)
     if(map.getLayer('rlPointsFill')) map.removeLayer('rlPointsFill');
     if(map.getLayer('rlPointsLine')) map.removeLayer('rlPointsLine');
     try{map.removeSource('rlPoints');}catch(err){}
+    try{homeMarker.remove()} catch(err){}
     
     //Find the starting point of the RouteLoop
     var theLocation = document.getElementById("inputLocation").value;
@@ -104,6 +106,18 @@ async function doRL(waypointsIn)
     //Center the map on this location.
     if (typeof waypointsIn == "undefined")
 	map.setCenter([theLatLng.lng,theLatLng.lat]);
+    
+    //Put a house marker at the start/end point.
+    var el = document.createElement('div');
+    el.className = 'marker';
+    el.style.backgroundImage = `url(http://${hostname}:${port}/images/Home.png)`;
+    el.style.width = '30px';
+    el.style.height = '30px';
+
+    homeMarker = new mapboxgl.Marker(el,{draggable:true})
+	.setLngLat([theLatLng.lng,theLatLng.lat])
+	.setPopup(new mapboxgl.Popup().setText(`${theLocation}`))
+	.addTo(map);
 
     var initialWaypoints = [];
     if (typeof waypointsIn == "undefined"){
