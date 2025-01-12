@@ -4,8 +4,8 @@ It works using APIs from various mapping services.
 Code for various services is stored in separate directories.  
   
 To run the code:  
-1. You will need Node.js running on your machine.\
-  - Current working version running under Node.js version 22.12.0.  
+1. You will need Node.js running on your machine.  
+   - Current working version running under Node.js version 22.12.0.  
 2. You will need an API key for whatever mapping service you choose to use.  
    - Put the API key into index.html
    - Place a .env file into the same directory as the server.js code.  Each example is separate (Google, OSM, MapBox) so a separate .env is needed for each.
