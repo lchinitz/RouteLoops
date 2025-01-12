@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!-- Replace Location with desired -->
+<!-- Make sure clientCode has a valid API token -->
+<html>
+  <head>
+    <link rel="icon" type="image/gif" href="animated_favicon1.gif">
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <title>RouteLoops using the MapBox API</title>
+	
+    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.2/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.2/mapbox-gl.js"></script>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 80%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+        
+    <script src="https://unpkg.com/file-saver/dist/FileSaver.min.js"></script>
+    <script type="text/javascript" src="clientCode.js"></script>
+  </head>  
+  <body onload="initMap()">
+    <div id="inputs">
+      Location: <input type="text" value="Wellesley MA 02482 USA" id="inputLocation" size="40"/>
+      Dist: <input type="text" value="10" id="inputDist" size="3"/>
+      <!--Units:-->
+      <select id="inputUnits">
+	<option value="imperial" selected>Imperial (Miles)</option>
+	<option value="metric">Metric (Kilometers)</option>
+      </select>
+      <!--<input type="button" value="RL!" onclick="callRlApi()"/>-->
+      <input type="button" value="Make a RouteLoop!" onclick="doRL()" style="background-color: #04AA6D;padding: 5px 5px;font-size: 14px;border-radius: 20%;color:white;"/>
+      <!--<input type="button" value="RL!" onclick="getDirections()" />-->
+      &nbsp;&nbsp;
+      <span style="font-size:26px; background-color:yellow; color:black;" >
+	Distance:  <span id="outDist"></span> <span id="distUnits"></span>
+      </span>      
+      <br/>
+      Mode: <select id="inputMode">
+	<option value="driving-traffic">Driving, traffic</option>
+	<option value="driving">Driving</option>
+	<option value="cycling" selected>Bike</option>
+	<option value="walking">Walking</option>
+      </select> 
+      Rotation: <select id="inputRotation">
+	<option value="clockwise" selected>Clockwise</option>
+	<option value="counterclockwise">Counter-clockwise</option>
+      </select>
+      Direction: <select id="inputDirection">
+	<option value="0" selected>Random</option>
+	<option value="1">North</option>
+	<option value="2">Northeast</option>
+	<option value="3">East</option>
+	<option value="4">Southeast</option>
+	<option value="5">South</option>
+	<option value="6">Southwest</option>
+	<option value="7">West</option>
+	<option value="8">Northwest</option>
+      </select>
+      Path Method: <select id="method">
+	<option value="random" selected>Random</option>
+	<option value="circular">Circular</option>
+	<option value="rectangular">Rectangular</option>
+	<option value="figure8">Figure 8</option>
+      </select>
+      Avoid Highways: <select id="inputHighways">
+	<option value="yes" selected>Yes</option>
+	<option value="no">No</option>
+      </select>
+      Avoid Ferries: <select id="inputFerries">
+	<option value="yes" selected>Yes</option>
+	<option value="no">No</option>
+      </select>
+      
+    </div>
+    
+    <div id="map" style="height:87%; width:100%;"></div>
+    
+    <div id="outputs">
+      <span style="display:none;">      
+	Status: <span id="status"></span>
+	Messages: <span id="messages"></span>
+	# Calcs: <span id="calcs"></span>
+	Start/End: <span id="outLoc"></span>
+      </span>
+      Route Name: <input type="text" placeHolder="Route Name" id="routeName" size="15"/>
+      Output: <select id="createOutput" onchange="generateOutput()">
+	<option value="none" selected>Select output format</option>
+	<option value="directions">Directions</option>
+	<option value="sparseGPX">Sparse GPX</option>
+	<option value="denseGPX">Dense GPX</option>
+	<option value="tcx">TCX</option>
+      </select>
+      Show Direction Markers <input type="checkbox" id="directionMarkers" onchange="showDirectionMarkers()"/>
+      <!--Lock Route <input type="checkbox" id="lockRoute" onchange="lockRoute()"/>-->
+      <input type="button" id="reverseRoute" onclick="reverseRoute()" value="Reverse Route" />      
+      <input type="button" id="removeWaypoint" onclick="removeWaypoint()" value="Remove Waypoint" />
+      <input type="button" id="addWaypoint" onclick="addWaypoint()" value="Add Waypoint" />
+    </div>
+
+    <div id="announceDiv" style="position:absolute; left:100px; top:20px;">
+      <center><input type="button" id="closeAnnouce" value="close" onclick="closeAnnounce()" style="background-color:red;padding: 5px 5px;font-size:12px;border-radius: 40%;color:black;"/></center>
+      <div id="innerAnnounce"></div>
+    </div>
+    <script> function closeAnnounce() {document.getElementById("announceDiv").style.display = "none";} </script>    
+  </body>
+</html>
