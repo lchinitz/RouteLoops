@@ -38,6 +38,22 @@ app.listen(thePort, function () {
     console.log(`Server has been started and is listening on port ${thePort}`);
 });
 
+//*/
+//Secure Server
+import https from 'https';
+https.createServer(
+    {
+	key: fs.readFileSync('/etc/letsencrypt/live/routeloops.com/privkey.pem'),
+	cert: fs.readFileSync('/etc/letsencrypt/live/routeloops.com/cert.pem'),
+	ca: fs.readFileSync('/etc/letsencrypt/live/routeloops.com/fullchain.pem')
+    },app
+  )
+  .listen(8443, () => {
+    console.log('Listening on 8443 ...')
+  })
+//*/
+
+
 //.......................................................................
 function info(req,res,next)
 {
