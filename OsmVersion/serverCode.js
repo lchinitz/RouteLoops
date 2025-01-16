@@ -32,10 +32,27 @@ app.post('/removeWaypoint',removeWaypoint);
 app.get('/readFile',readFile);
 
 // Setup Server
-const thePort = 8080;
+const thePort = 8181;
 app.listen(thePort, function () {
     console.log(`Server has been started and is listening on port ${thePort}`);
 });
+
+//*/
+//Secure Server
+import https from 'https';
+https.createServer(
+    {
+	key: fs.readFileSync('/etc/letsencrypt/live/routeloops.com/privkey.pem'),
+	cert: fs.readFileSync('/etc/letsencrypt/live/routeloops.com/cert.pem'),
+	ca: fs.readFileSync('/etc/letsencrypt/live/routeloops.com/fullchain.pem')
+    },app
+  )
+  .listen(8444, () => {
+    console.log('Listening on 8444 ...')
+  })
+//*/
+
+
 
 //.......................................................................
 function info(req,res,next)

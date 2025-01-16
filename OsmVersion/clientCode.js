@@ -13,9 +13,9 @@ async function initMap()
 {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    //var announcementURL = `http://${hostname}:${port}/announcement.html`;
+    //var announcementURL = `${protocol}//${hostname}:${port}/announcement.html`;
     //window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
-    var url = `http://${hostname}:${port}/readFile?fileName=announcement.html`;
+    var url = `${protocol}//${hostname}:${port}/readFile?fileName=announcement.html`;
     var theResp = await fetch(url);
     var theJson = await theResp.json();    
     var theHTML = theJson.contents;
@@ -44,7 +44,7 @@ async function initMap()
     var routerToUse = null;
     if (theRouter=="OSM") routerToUse = new L.Routing.OSRMv1({"profile": `${theMode}`});
     if (theRouter=="MapBox"){
-	var theToken = 'A Valid Token for MapBox';
+	var theToken = 'A valid token';
 	var theProfile = "cycling";
 	if (theMode.indexOf("driving")>=0) theProfile = "driving";
 	if (theMode.indexOf("cycling")>=0) theProfile = "cycling";
@@ -73,7 +73,7 @@ async function initMap()
 	for (const waypoint of newWaypoints) currentWaypoints.push(waypoint);
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	    
 	var data = {allPoints:allPoints};
-	var url = `http://${hostname}:${port}/modifyDirections`;
+	var url = `${protocol}//${hostname}:${port}/modifyDirections`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();
 	distDisplay = theJson.totalDistanceKm;
@@ -151,7 +151,7 @@ async function doRL(waypointsIn)
     var encoded = encodeURI(theLocation);
 
     //Geocode this starting location in to a Lat/Lng pair.
-    var url = `http://${hostname}:${port}/geocode?location=${encoded}`;
+    var url = `${protocol}//${hostname}:${port}/geocode?location=${encoded}`;
     var theResp = await fetch(url);
     var theJson = await theResp.json();    
     var theLatLng = {lat:theJson.features[0].geometry.coordinates[1],lng:theJson.features[0].geometry.coordinates[0]};
@@ -174,7 +174,7 @@ async function doRL(waypointsIn)
 	var theUnits    = document.getElementById("inputUnits").value;
 	var theRotation  = document.getElementById("inputRotation").value;
 	var theDirection= document.getElementById("inputDirection").value;    
-	var url = `http://${hostname}:${port}/getRLpoints?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
+	var url = `${protocol}//${hostname}:${port}/getRLpoints?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
 	url += `&dist=${theDistance}&units=${theUnits}&rotation=${theRotation}&direction=${theDirection}`;
 	var theMethod= document.getElementById("method").value;    
 	url += `&method=${theMethod}`;
@@ -208,7 +208,7 @@ async function doRL(waypointsIn)
     var fitnessLevel  = document.getElementById("fitnessLevel").value;    
     var greenFactor   = document.getElementById("greenFactor").value;    
     var quietFactor   = document.getElementById("quietFactor").value;    
-    var url = `http://${hostname}:${port}/directions?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
+    var url = `${protocol}//${hostname}:${port}/directions?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
     url += `&mode=${theMode}&highways=${inputHighways}&ferries=${inputFerries}`;
     url += `&fitnessLevel=${fitnessLevel}&greenFactor=${greenFactor}&quietFactor=${quietFactor}`;    
     var waypointText= "";
@@ -237,7 +237,7 @@ async function doRL(waypointsIn)
 
 	//Take allPoints and clean up the path.
 	var data = {LLs:allPoints};
-	var url = `http://${hostname}:${port}/cleanTails`;
+	var url = `${protocol}//${hostname}:${port}/cleanTails`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var cleanTailsJson = await theResp.json();
 
@@ -261,7 +261,7 @@ async function doRL(waypointsIn)
 	    for (const waypoint of newWaypoints) waypoints.push(waypoint);
 
 	    //Generate a new path based on this new set of waypoints.
-	    var url = `http://${hostname}:${port}/directions?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
+	    var url = `${protocol}//${hostname}:${port}/directions?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
 	    url += `&mode=${theMode}&highways=${inputHighways}&ferries=${inputFerries}`;
 	    var waypointText= "";
 	    for (const waypoint of waypoints) waypointText += `${waypoint.lat},${waypoint.lng}|`;
@@ -353,7 +353,7 @@ async function generateOutput()
 	if (pace.indexOf("minutes-per")>=0) speed = 60/speed;
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	    
 	var data = {allPoints:allPoints,units:units,speed:speed};
-	var url = `http://${hostname}:${port}/showDirections`;
+	var url = `${protocol}//${hostname}:${port}/showDirections`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();	
 	doPrint = confirm("Print it?");
@@ -363,7 +363,7 @@ async function generateOutput()
     if (theType=="sparseGPX"){
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	    
 	var data = {allPoints:allPoints};
-	var url = `http://${hostname}:${port}/makeSparseGPX`;
+	var url = `${protocol}//${hostname}:${port}/makeSparseGPX`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();
 	doPrint = true;
@@ -374,7 +374,7 @@ async function generateOutput()
 	var speed = prompt(`Your average ${mode} speed in ${pace}.`,paceDefault)
 	if (pace.indexOf("minutes-per")>=0) speed = 60/speed;
 	var data = {allPoints:allPoints,units:units,speed:speed};
-	var url = `http://${hostname}:${port}/makeDenseGPX`;
+	var url = `${protocol}//${hostname}:${port}/makeDenseGPX`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();
 	doPrint = true;
@@ -386,7 +386,7 @@ async function generateOutput()
 	if (pace.indexOf("minutes-per")>=0) speed = 60/speed;
 	var advance = prompt(`Set turn warnings this many ${advanceUnits} in advance.`,300);
 	var data = {allPoints:allPoints,units:units,speed:speed,advance:advance,name:routeName};
-	var url = `http://${hostname}:${port}/makeTCX`;
+	var url = `${protocol}//${hostname}:${port}/makeTCX`;
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();
 	doPrint = true;
@@ -460,7 +460,7 @@ async function doRemoveWaypoint(lat,lng){
     
     var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
     var data = {lat:lat,lng:lng,waypoints:currentWaypoints};
-    var url = `http://${hostname}:${port}/removeWaypoint`;
+    var url = `${protocol}//${hostname}:${port}/removeWaypoint`;
     var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
     var theJson = await theResp.json();
     doRemoval = false;
