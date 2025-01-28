@@ -32,6 +32,7 @@ async function initMap()
 	var lat = event.latlng.lat;
 	var lng = event.latlng.lng;
 	if (doRemoval) doRemoveWaypoint(lat,lng);	
+	if (doAdd) doAddWaypoint(lat,lng);
     });    
     
     const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -470,3 +471,29 @@ async function doRemoveWaypoint(lat,lng){
 
     return;
 }
+
+//..................................................................
+function addWaypoint(){
+    if (allPoints.length==0) return;
+    else{
+	doAdd = true;
+	alert('Click on the route on, or near, the location where you want a new waypoint.');
+	return;
+    }
+}
+//................................................................
+async function doAddWaypoint(lat,lng){
+    
+    var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
+    var data = {lat:lat,lng:lng,waypoints:currentWaypoints,allPoints:allPoints};
+    var url = `${protocol}//${hostname}:${port}/addWaypoint`;
+    var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+    var theJson = await theResp.json();
+    doAdd = false;
+
+    currentWaypoints = JSON.parse(JSON.stringify(theJson.modifiedWaypoints));
+    doRL(currentWaypoints);
+
+    return;
+}
+

@@ -29,15 +29,16 @@ app.post('/makeSparseGPX',makeSparseGPX);
 app.post('/makeDenseGPX',makeDenseGPX);
 app.post('/makeTCX',makeTCX);
 app.post('/removeWaypoint',removeWaypoint);
+app.post('/addWaypoint',addWaypoint);
 app.get('/readFile',readFile);
 
 // Setup Server
-const thePort = 8181;
+const thePort = 8080;
 app.listen(thePort, function () {
     console.log(`Server has been started and is listening on port ${thePort}`);
 });
 
-//*/
+/*/
 //Secure Server
 import https from 'https';
 https.createServer(
@@ -47,8 +48,8 @@ https.createServer(
 	ca: fs.readFileSync('/etc/letsencrypt/live/routeloops.com/fullchain.pem')
     },app
   )
-  .listen(8444, () => {
-    console.log('Listening on 8444 ...')
+  .listen(8443, () => {
+    console.log('Listening on 8443 ...')
   })
 //*/
 
@@ -1187,6 +1188,68 @@ function removeWaypoint(req,res,next){
     }
 }
  
+//..............................................................
+function addWaypoint(req,res,next){
+    var method = req.method;
+    var url = req.url;
+    if (method.toLowerCase() == 'get'){
+    }
+    
+    else if (method.toLowerCase() == 'post'){
+	
+	var body = req.body;
+	var lat = body.lat;
+	var lng = body.lng;
+	var waypoints = body.waypoints;
+	var allPoints = body.allPoints;
+
+	//First, find the allPoint closest to this location.
+	var closest = null;
+	for (var i=0;i<allPoints.length;i++){
+	    const point = allPoints[i];
+	    var separation = Math.pow((lat-point.lat),2) + Math.pow((lng-point.lng),2)
+	    if (closest==null) closest = {point:point,separation:separation,index:i};
+	    if (separation < closest.separation) closest = {point:point,separation:separation,index:i};
+	}
+
+	//So, you are going to want a new waypoint at the location of allPoints[closest.index].
+
+	//Where are the waypoints relative to allPoints?
+	for (const waypoint of waypoints){
+	    var thisClose = null;
+	    for (var i=0;i<allPoints.length;i++){
+		const point = allPoints[i];
+		var separation = Math.pow((waypoint.lat-point.lat),2) + Math.pow((waypoint.lng-point.lng),2)
+		if (thisClose==null) thisClose = {point:point,separation:separation,index:i};
+		if (separation < thisClose.separation) thisClose = {point:point,separation:separation,index:i};
+	    }
+	    waypoint.closest = thisClose;	    
+	}
+
+	//Where to put this new waypoint in the waypoint list? Find out which waypoints surround the new point.
+	var putItAt = null;
+	if (closest.index < waypoints[0].closest.index) putItAt = 0;
+	else if (closest.index > waypoints[waypoints.length-1].closest.index) putItAt = waypoints.length;
+	else{
+	    for (var i=0;i<waypoints.length-1;i++){
+		if (closest.index>waypoints[i].closest.index && closest.index<waypoints[i+1].closest.index){
+		    putItAt = i+1;
+		    break;
+		}
+	    }
+	}
+	
+	if (putItAt != null) {
+	    var newWaypoint = {lat:lat,lng:lng};
+	    waypoints.splice(putItAt,0,newWaypoint);
+	}	
+	
+	waypoints.splice(closest.index,1);
+
+	res.json({closest:closest,modifiedWaypoints:waypoints});
+    }
+}
+
 //.........................................................................
 async function readFile(req,res,next)
 {
