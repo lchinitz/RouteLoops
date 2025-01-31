@@ -497,3 +497,9 @@ async function doAddWaypoint(lat,lng){
     return;
 }
 
+//............................................................................
+function legacyUI(){
+    var url = `${protocol}//${hostname}:${port}/legacyOSM`;
+    window.open(url,'_blank');
+    return;
+}
