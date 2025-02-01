@@ -133,18 +133,41 @@ async function directions(req,res,next)
 	options.profile_params.weightings.green = 1*result.greenFactor;
 	options.profile_params.weightings.quiet = 1*result.quietFactor;
 
-	//var data = {coordinates:coordinates};	
-	var data = {coordinates:coordinates,options:options};	
+	var tryAgain = true;
+	while (tryAgain){
+	    //var data = {coordinates:coordinates};	
+	    var data = {coordinates:coordinates,options:options};	
 	
-	var url = api_root;
-	var response = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
-	const theJson = await response.json();
-
-	console.log(api_root);
-	console.log(JSON.stringify(data));
-	
-	//console.log(theJson.routes);
-
+	    var url = api_root;
+	    var response = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+	    var theJson = await response.json();
+	    
+	    console.log(api_root);
+	    console.log(JSON.stringify(data));
+	    
+	    //console.log(theJson);
+	    //console.log(theJson.routes);
+	    
+	    //It is possible for this routing call to fail.  Try and solve that problem if you can.
+	    if (theJson.hasOwnProperty("error")){
+		if (theJson.error.message.indexOf("Could not find routable point")>=0){
+		    var split = theJson.error.message.split("coordinate");
+		    var info = split[1].trim();
+		    split = info.split(":");
+		    var badCoord = split[0];
+		    var badLL = split[1].trim();
+		    split = badLL.split(" ");
+		    var badLatLng = {lat:split[0],lng:split[1]};
+		    console.log (`Coordinate ${badCoord} at ${JSON.stringify(badLatLng)} is bad, so try again without it.`);
+		    coordinates.splice(badCoord,1);
+		}
+	    }
+	    else{
+		tryAgain = false;
+	    }
+	    await new Promise(resolve => setTimeout(resolve, 1000));  //Avoid hitting rate limits.  Node.js method of sleeping.
+	}
+	    
 	//Get the detailed road structure, and put it into the returned JSON under step/polyline/array
 	for (const feature of theJson.features){
 	    //Fill the allPoints array, which is the detailed list of lat,lng points for this route.

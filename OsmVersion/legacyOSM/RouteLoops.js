@@ -528,6 +528,17 @@ function handleFixed(nFix)
 async function getRLpoints()
 {
 
+    var BaseIsSet = false;
+    try{
+	var test = BaseLocation.lat;
+	BaseIsSet = true;
+    }
+    catch(err){}
+    if (!BaseIsSet){
+	alert("You need to set the start/end point, first.");
+	return;
+    }
+
   for(var i=0;i<importedTracks.length;i++)
     if(importedTracks[i])importedTracks[i].setMap(null);
 
