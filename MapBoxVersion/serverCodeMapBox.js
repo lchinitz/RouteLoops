@@ -33,7 +33,7 @@ app.post('/addWaypoint',addWaypoint);
 app.get('/readFile',readFile);
 
 // Setup Server
-const thePort = 8080;
+const thePort = 8181;
 app.listen(thePort, function () {
     console.log(`Server has been started and is listening on port ${thePort}`);
 });
@@ -48,8 +48,8 @@ https.createServer(
 	ca: fs.readFileSync('/etc/letsencrypt/live/routeloops.com/fullchain.pem')
     },app
   )
-  .listen(8443, () => {
-    console.log('Listening on 8443 ...')
+  .listen(8444, () => {
+    console.log('Listening on 8444 ...')
   })
 //*/
 

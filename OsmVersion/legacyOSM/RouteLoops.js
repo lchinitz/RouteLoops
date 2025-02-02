@@ -199,7 +199,7 @@ function initialize() {
     }
     RoutingControl = L.Routing.control({
 	waypoints:[],
-	lineOptions: {styles: [{color: 'black', opacity: 1, weight: 5}]},
+	lineOptions: {styles: [{color: 'red', opacity: 1, weight: 3}]},
 	router: routerToUse				     
     }).addTo(map);
     
