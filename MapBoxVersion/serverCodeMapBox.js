@@ -113,9 +113,9 @@ async function directions(req,res,next)
 	coordString = coordString.slice(0,-1);
 
 	var excludes = "";
-	if (result.mode.indexOf("driv")>=0) excludes += "toll,";
 	if (result.ferries=="yes") excludes += "ferry,";
 	if (result.mode.indexOf("driv")>=0 && result.highways=="yes") excludes += "motorway,";
+	if (result.mode.indexOf("driv")>=0 && result.highways=="yes") excludes += "toll,";
 	excludes = excludes.slice(0,-1);
 	
 	var url = api_root;
