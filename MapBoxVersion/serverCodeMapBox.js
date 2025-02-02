@@ -38,7 +38,7 @@ app.listen(thePort, function () {
     console.log(`Server has been started and is listening on port ${thePort}`);
 });
 
-//*/
+/*/
 //Secure Server
 import https from 'https';
 https.createServer(

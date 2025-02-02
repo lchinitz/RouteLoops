@@ -40,7 +40,7 @@ app.listen(thePort, function () {
     console.log(`Server has been started and is listening on port ${thePort}`);
 });
 
-//*/
+/*/
 //Secure Server
 import https from 'https';
 https.createServer(
@@ -94,9 +94,16 @@ async function directions(req,res,next)
 	console.log('Doing a directions GET call:');
 	console.log(JSON.stringify(result,null,2));
 
-	var avoids = "tolls";
-	if (result.ferries == "yes") avoids += "|ferries";
-	if (result.highways == "yes") avoids += "|highways";
+	var avoids = "";
+	if (result.mode.indexOf("driv")>=0 && result.highways=="yes") avoids = "tolls";	
+	if (result.ferries == "yes"){
+	    if (avoids.length>0) avoids += "|";
+	    avoids += "ferries";
+	}
+	if (result.highways == "yes"){
+	    if (avoids.length>0) avoids += "|";
+	    avoids += "highways";
+	}
 
 	var api_root =    "https://maps.googleapis.com/maps/api/directions/json?";
 	var key =         process.env.GOOGLE_API_KEY;

@@ -121,7 +121,8 @@ async function directions(req,res,next)
 	for (const waypoint of wpts) coordinates.push([waypoint.lng,waypoint.lat]); 
 	coordinates.push([result.lng,result.lat]);
 
-	result.tolls = "yes";
+	result.tolls = "no";
+	if (result.highways == "yes") result.tolls = "yes";
 	var options = {};
 	options.avoid_features = [];
 	if (result.mode.indexOf("driv")>=0 && result.tolls == "yes")  options.avoid_features.push("tollways");
@@ -134,6 +135,7 @@ async function directions(req,res,next)
 	options.profile_params.weightings.quiet = 1*result.quietFactor;
 
 	var tryAgain = true;
+	var directionsError = null;
 	while (tryAgain){
 	    //var data = {coordinates:coordinates};	
 	    var data = {coordinates:coordinates,options:options};	
@@ -160,6 +162,11 @@ async function directions(req,res,next)
 		    var badLatLng = {lat:split[0],lng:split[1]};
 		    console.log (`Coordinate ${badCoord} at ${JSON.stringify(badLatLng)} is bad, so try again without it.`);
 		    coordinates.splice(badCoord,1);
+		    tryAgain = true;
+		}
+		else if (theJson.error.message.indexOf("150000")>=0){
+		    directionsError = theJson.error.message;
+		    tryAgain = false;
 		}
 	    }
 	    else{
@@ -167,53 +174,59 @@ async function directions(req,res,next)
 	    }
 	    await new Promise(resolve => setTimeout(resolve, 1000));  //Avoid hitting rate limits.  Node.js method of sleeping.
 	}
+
+	if (directionsError==null){
 	    
-	//Get the detailed road structure, and put it into the returned JSON under step/polyline/array
-	for (const feature of theJson.features){
-	    //Fill the allPoints array, which is the detailed list of lat,lng points for this route.
-	    var allPoints = [];
-	    for (const coordinate of feature.geometry.coordinates){
-		allPoints.push({lat:coordinate[1],lng:coordinate[0]});
-	    }
-	    //Remove any duplicates.
-	    for (var a=allPoints.length-1;a>=1;a--){
-		if(allPoints[a].lat==allPoints[a-1].lat && allPoints[a].lng==allPoints[a-1].lng){
-		    allPoints.splice(a,1);
+	    //Get the detailed road structure, and put it into the returned JSON under step/polyline/array
+	    for (const feature of theJson.features){
+		//Fill the allPoints array, which is the detailed list of lat,lng points for this route.
+		var allPoints = [];
+		for (const coordinate of feature.geometry.coordinates){
+		    allPoints.push({lat:coordinate[1],lng:coordinate[0]});
 		}
-	    }
-	    //Get the cumulative distance at each point.
-	    var cumulativeDistance = 0;
-	    allPoints[0].cumulativeDistanceKm = 0;
-	    for (var a=1;a<allPoints.length;a++){
-		cumulativeDistance += LatLngDist(allPoints[a-1].lat,allPoints[a-1].lng,allPoints[a].lat,allPoints[a].lng);
-		allPoints[a].cumulativeDistanceKm = cumulativeDistance;
-	    }
-	    feature.totalDistanceKm = cumulativeDistance;
-	    //Search for instructions and put them into the allPoints list.
-	    for (const segment of feature.properties.segments){
-		for (const step of segment.steps){
-		    var atPoint = step.way_points[0];
-		    var instructions = step.instruction;
-		    try{allPoints[atPoint].instructions = instructions;} catch(err){}
+		//Remove any duplicates.
+		for (var a=allPoints.length-1;a>=1;a--){
+		    if(allPoints[a].lat==allPoints[a-1].lat && allPoints[a].lng==allPoints[a-1].lng){
+			allPoints.splice(a,1);
+		    }
 		}
-	    }
-	    //Get distance to next instruction
-	    for (var a=0;a<allPoints.length;a++){
-		if (!allPoints[a].hasOwnProperty("instructions")) continue;
-		var distanceToNext = 0;
-		for (var b=a+1;b<allPoints.length;b++){
-		    distanceToNext += LatLngDist(allPoints[b-1].lat,allPoints[b-1].lng,allPoints[b].lat,allPoints[b].lng);
-		    if (allPoints[b].hasOwnProperty("instructions"))break;
+		//Get the cumulative distance at each point.
+		var cumulativeDistance = 0;
+		allPoints[0].cumulativeDistanceKm = 0;
+		for (var a=1;a<allPoints.length;a++){
+		    cumulativeDistance += LatLngDist(allPoints[a-1].lat,allPoints[a-1].lng,allPoints[a].lat,allPoints[a].lng);
+		    allPoints[a].cumulativeDistanceKm = cumulativeDistance;
 		}
-		allPoints[a].distanceToNextKm = distanceToNext;
-		allPoints[a].nextInstructionAt = b;
-		a = b-1; //Because it will increment when it goes back to the top.
+		feature.totalDistanceKm = cumulativeDistance;
+		//Search for instructions and put them into the allPoints list.
+		for (const segment of feature.properties.segments){
+		    for (const step of segment.steps){
+			var atPoint = step.way_points[0];
+			var instructions = step.instruction;
+			try{allPoints[atPoint].instructions = instructions;} catch(err){}
+		    }
 		}
-	    
-	    feature.allPoints = allPoints;
-	    }
+		//Get distance to next instruction
+		for (var a=0;a<allPoints.length;a++){
+		    if (!allPoints[a].hasOwnProperty("instructions")) continue;
+		    var distanceToNext = 0;
+		    for (var b=a+1;b<allPoints.length;b++){
+			distanceToNext += LatLngDist(allPoints[b-1].lat,allPoints[b-1].lng,allPoints[b].lat,allPoints[b].lng);
+			if (allPoints[b].hasOwnProperty("instructions"))break;
+		    }
+		    allPoints[a].distanceToNextKm = distanceToNext;
+		    allPoints[a].nextInstructionAt = b;
+		    a = b-1; //Because it will increment when it goes back to the top.
+		}
 		
-	res.json(theJson);
+		feature.allPoints = allPoints;
+	    }
+	    
+	    res.json(theJson);
+	}
+	else{  //there has been an error
+	    res.json({status:"NG",error:directionsError});
+	}
     }
     
     else if (method.toLowerCase() == 'post'){
