@@ -275,6 +275,7 @@ async function doRL(waypointsIn)
 		//Generate a new path based on this new set of waypoints.
 		var url = `${protocol}//${hostname}:${port}/directions?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
 		url += `&mode=${theMode}&highways=${inputHighways}&ferries=${inputFerries}`;
+		url += `&fitnessLevel=${fitnessLevel}&greenFactor=${greenFactor}&quietFactor=${quietFactor}`;
 		var waypointText= "";
 		for (const waypoint of waypoints) waypointText += `${waypoint.lat},${waypoint.lng}|`;
 		waypointText = waypointText.slice(0,-1);

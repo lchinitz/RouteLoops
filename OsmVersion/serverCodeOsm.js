@@ -137,7 +137,8 @@ async function directions(req,res,next)
 	var tryAgain = true;
 	var directionsError = null;
 	while (tryAgain){
-	    //var data = {coordinates:coordinates};	
+	    //var data = {coordinates:coordinates};
+	    //console.log(`At this time, result is ${JSON.stringify(result)}`);
 	    var data = {coordinates:coordinates,options:options};	
 	
 	    var url = api_root;
