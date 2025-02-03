@@ -94,7 +94,7 @@ async function directions(req,res,next)
 	    }
         }
 	console.log('Doing a directions GET call:');
-	console.log(JSON.stringify(result,null,2));
+	//console.log(JSON.stringify(result,null,2));
 
 	var avoids = "tolls";
 	if (result.ferries == "yes") avoids += "|ferries";
@@ -303,8 +303,8 @@ async function getRLpoints(req,res,next)
 
 	var LatLng = {lat:1*result.lat,lng:1*result.lng};
 	
-	console.log('Doing a getRLpoints GET call:');
-	console.log(JSON.stringify(result,null,2));	
+	//console.log('Doing a getRLpoints GET call:');
+	//console.log(JSON.stringify(result,null,2));	
 
 	var targetLengthInMeters = result.dist;
 
