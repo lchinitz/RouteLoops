@@ -51,6 +51,20 @@ async function initMap()
 	if (theMode.indexOf("cycling")>=0) theProfile = "cycling";
 	if (theMode.indexOf("walking")>=0) theProfile = "walking";
 	if (theMode.indexOf("foot")>=0) theProfile = "walking";
+	//Change this to use the input from the query string
+	const urlParams = new URLSearchParams(window.location.search);
+	if (urlParams.has("mode")) {
+	    var mode = urlParams.get("mode");
+	    if (mode.indexOf("driv")>=0) theProfile = "driving";
+	    if (mode.indexOf("car")>=0)  theProfile = "driving";
+	    if (mode.indexOf("cycl")>=0) theProfile = "cycling";
+	    if (mode.indexOf("bik")>=0)  theProfile = "cycling";
+	    if (mode.indexOf("walk")>=0) theProfile = "walking";
+	    if (mode.indexOf("foot")>=0) theProfile = "walking";
+	    if (theProfile=="driving") document.getElementById("inputMode").value="driving-car";
+	    if (theProfile=="cycling") document.getElementById("inputMode").value="cycling-road";
+	    if (theProfile=="walking") document.getElementById("inputMode").value="foot-walking";
+	}
 	routerToUse = new L.Routing.mapbox(theToken,{profile:`mapbox/${theProfile}`});
     }
     RoutingControl = L.Routing.control({
@@ -102,6 +116,16 @@ async function initMap()
     });
     
     
+}
+//--------------------------------------
+function changeMode(){
+    var theMode = document.getElementById('inputMode').value;
+    const currentUrl = window.location.href;
+    var split = currentUrl.split("?");
+    var url = split[0];
+    url += `?mode=${theMode}`;
+    window.open(url,"_self")
+    return;
 }
 //--------------------------------------
 function displayMarker(index){

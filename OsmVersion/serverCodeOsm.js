@@ -325,7 +325,8 @@ async function getRLpoints(req,res,next)
 	    var methods = ["circular","rectangular","figure8"];
 	    pickMethod = methods[Math.floor(Math.random() * methods.length)];
 	}
-	
+
+	console.log(`picMethod of ${pickMethod} in direction ${direction}`);
 	var rlPoints = [];
 	if(pickMethod=="circular") rlPoints = circleRoute(LatLng,targetLengthInMeters,direction,rotation);
 	if(pickMethod=="rectangular") rlPoints = rectangleRoute(LatLng,targetLengthInMeters,direction,rotation);

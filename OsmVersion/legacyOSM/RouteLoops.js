@@ -1,4 +1,4 @@
-// Make sure this code has a valid token
+//Make sure this code has a valid token.  A restricted token!
 
 const { protocol, hostname, port } = window.location;
 var geocoder;
@@ -158,7 +158,7 @@ function initialize() {
   baseSet = false;
 
   //Permalinks always win, so check them first.
-  if(query.length>0)checkForPermalink(currentURL);
+  //if(query.length>0)checkForPermalink(currentURL);
 
   //But, maybe you don't have a permalink.  Actually, that's the usual case.  So now check for cookies.
   if(!baseSet)checkForCookies();
@@ -195,7 +195,18 @@ function initialize() {
 	if (theMode.indexOf("cycling")>=0) theProfile = "cycling";
 	if (theMode.indexOf("walking")>=0) theProfile = "walking";
 	if (theMode.indexOf("foot")>=0) theProfile = "walking";
-	routerToUse = new L.Routing.mapbox(theToken,{profile:`mapbox/${theProfile}`});
+	//Change this to use the input from the query string
+	const urlParams = new URLSearchParams(window.location.search);
+	if (urlParams.has("mode")) {
+	    var mode = urlParams.get("mode");
+	    if (mode.indexOf("0")>=0) theProfile = "driving";
+	    if (mode.indexOf("1")>=0) theProfile = "cycling";
+	    if (mode.indexOf("2")>=0) theProfile = "walking";
+	    if (theProfile=="driving") document.getElementById("travelMode").value="0";
+	    if (theProfile=="cycling") document.getElementById("travelMode").value="1";
+	    if (theProfile=="walking") document.getElementById("travelMode").value="2";
+	}
+	routerToUse = new L.Routing.mapbox(theToken,{profile:`mapbox/${theProfile}`});	
     }
     RoutingControl = L.Routing.control({
 	waypoints:[],
@@ -268,6 +279,16 @@ function initialize() {
 
   if(query.length>0 && baseSet)calcRoute(); //So, if you came in with a permalink, create the route.
 
+}
+//--------------------------------------
+function changeMode(){
+    var theMode = document.getElementById('travelMode').value;
+    const currentUrl = window.location.href;
+    var split = currentUrl.split("?");
+    var url = split[0];
+    url += `?mode=${theMode}`;
+    window.open(url,"_self")
+    return;
 }
 //.......................................
 function showDirectionMarkers(){
@@ -559,7 +580,7 @@ async function getRLpoints()
 	var theRotation  = document.getElementById("travelDirection").value;
 	if (theRotation=="0")theRotation="clockwise";
 	else if (theRotation=="1")theRotation="counterclockwise";
-	var theDirection= document.getElementById("travelDirection").value;
+	var theDirection= document.getElementById("travelHeading").value;
 	var theDistance = targetLengthInMeters/1000;
 	var theUnits = "metric";
 	var url = `${protocol}//${hostname}:${port}/getRLpoints?lat=${theLatLng.lat}&lng=${theLatLng.lng}`;
