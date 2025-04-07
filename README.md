@@ -14,6 +14,9 @@ To run the code:
      * Create a .env file with MAPBOX_API_KEY=YOUR VALID MAPBOX API KEY 
 3. Start by running the server code.  For example, "node serverCode.js" in the GoogleVersion directory.  
 4. This should launch a server running at port 8080.  
-5. Use a browser and navigate to localhost:8080.  You should see the RouteLoops user interface.  
+5. Use a browser and navigate to localhost:8080.  You should see the RouteLoops user interface.
+
+April 7, 2025 Update
+1. An update has enabled API-based uploads directly to a Garmin Connect account.  In order to do this, if you decide to deploy your own version of RouteLoops, you would need a Garmin Connect Developer account, with associated keys.  This requires review by Garmin, but go here to start:  https://developerportal.garmin.com.
 
 This code is freely licensed.  You are welcome to use and modify.  Please make modifications available to the wider community.
