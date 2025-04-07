@@ -126,19 +126,39 @@
 	<option value="sparseGPX">Sparse GPX</option>
 	<option value="denseGPX">Dense GPX</option>
 	<option value="tcx">TCX</option>
+	<option value="garmin">Upload to Garmin Connect</option>
       </select>
+      <style> 
+	img:hover
+	{
+        transform: scale(2.5);
+	}
+      </style>
+      <span style="vertical-align:middle;" title="Connect this session to Garmin Connect for easy uploading of routes" onclick="connectToGarmin()">
+	<img id="yinYang" src="./images/RouteLoopsGarmin.png" width="30" height="30"/>
+      </span>
       Show Direction Markers <input type="checkbox" id="directionMarkers" onchange="showDirectionMarkers()"/>
       Lock Route <input type="checkbox" id="lockRoute" onchange="lockRoute()"/>
       <input type="button" id="reverseRoute" onclick="reverseRoute()" value="Reverse Route" />
       <input type="button" id="removeWaypoint" onclick="removeWaypoint()" value="Remove Waypoint" />      
       <input type="button" id="addWaypoint" onclick="addWaypoint()" value="Add Waypoint" />
-      <div style="display:inline; float:right;"><input type="button" id="legacyUI" onclick="legacyUI()" value="Legacy-like UI" /></div>
+      <div style="display:inline; float:right;">
+	<input type="button" id="legacyUI" onclick="legacyUI()" value="Legacy-like UI" />
+	<a href="privacy.html" target="_blank">Privacy</a>
+      </div>
     </div>
     
     <div id="announceDiv" style="position:absolute; left:100px; top:20px;">
       <center><input type="button" id="closeAnnouce" value="close" onclick="closeAnnounce()" style="background-color:red;padding: 5px 5px;font-size:12px;border-radius: 40%;color:black;"/></center>
       <div id="innerAnnounce"></div>
     </div>
-    <script> function closeAnnounce() {document.getElementById("announceDiv").style.display = "none";document.getElementById("map").style["z-index"] = ""} </script>    
+    <script> function closeAnnounce() {
+     document.getElementById("announceDiv").style.display = "none";
+     document.getElementById("map").style["z-index"] = "";
+     setTimeout(()=>{
+	 askAboutGarmin();
+     },500);}
+    </script>
+    <!--<input type="button" value="test" onclick="testFunction()" />-->
   </body>
 </html>

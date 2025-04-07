@@ -1,3 +1,5 @@
+//Adjust the callback.
+
 var map,directionsService,directionsRenderer;
 var rlPath,rawPath,guidepointPath;
 var allPoints;
@@ -6,23 +8,38 @@ var doRemoval = false;
 var directionMarkers = [];
 var homeMarker;
 const { protocol, hostname, port } = window.location;
+const urlParams = new URLSearchParams(window.location.search);
+var accessToken = null;
+var isRedirectFromGarmin = false;
+var garminCallback;
+var garminPulses = [];
+var garminPulseIndex;
 
 async function initMap()
 {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    //var announcementURL = `${protocol}//${hostname}:${port}/announcement.html`;
-    //window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
-    var url = `${protocol}//${hostname}:${port}/readFile?fileName=announcement.html`;
-    var theResp = await fetch(url);
-    var theJson = await theResp.json();    
-    var theHTML = theJson.contents;
-    document.getElementById("innerAnnounce").innerHTML = theHTML;
-    document.getElementById("announceDiv").style.height = `${height*0.95}px`;
-    document.getElementById("announceDiv").style.width = `${width*0.60}px`;
-    document.getElementById("announceDiv").style.left = `${300}px`;
-    document.getElementById("announceDiv").style.top = `${50}px`;
+    
+    if (urlParams.has("oauth_token") && urlParams.has("oauth_verifier")) isRedirectFromGarmin=true;
+    garminCallback = `${protocol}//${hostname}:${port}/index.html`;
 
+    if (!isRedirectFromGarmin){
+	//var announcementURL = `${protocol}//${hostname}:${port}/announcement.html`;
+	//window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
+	var url = `${protocol}//${hostname}:${port}/readFile?fileName=announcement.html`;
+	var theResp = await fetch(url);
+	var theJson = await theResp.json();    
+	var theHTML = theJson.contents;
+	document.getElementById("innerAnnounce").innerHTML = theHTML;
+	document.getElementById("announceDiv").style.height = `${height*0.95}px`;
+	document.getElementById("announceDiv").style.width = `${width*0.60}px`;
+	document.getElementById("announceDiv").style.left = `${300}px`;
+	document.getElementById("announceDiv").style.top = `${50}px`;
+    }
+    else{
+	closeAnnounce();
+    }
+    
     const { Map } = await google.maps.importLibrary("maps");
     const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
 	"marker",
@@ -100,6 +117,23 @@ async function initMap()
 	}
     });
     
+    if (isRedirectFromGarmin){
+	var oauth_token = urlParams.get("oauth_token");
+	var oauth_verifier = urlParams.get("oauth_verifier");
+	console.log(oauth_token);
+	console.log(oauth_verifier);
+	console.log(oauth_token=="null" || oauth_verifier=="null");
+	if (oauth_token=="null" || oauth_verifier=="null"){
+	    var comment = `Either the token (${oauth_token}) or the verifier (${oauth_verifier}) is null, so authentication to Garmin Connect did not succeed.\n`;
+	    comment += `You can still create routes on RouteLoops, save them locally, and upload to Garmin Connect later when connectivity has been re-established.`;
+	    alert(comment);
+	}
+	else{
+	    connectToGarmin(3);
+	}
+    }
+	
+    return;
 }
 //--------------------------------------
 function displayMarker(index){
@@ -403,7 +437,36 @@ async function generateOutput()
 	var theJson = await theResp.json();
 	doPrint = true;
     }
-    
+
+    if (theType=="garmin"){
+	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	    
+	var data = {allPoints:allPoints,name:routeName};
+	var url = `${protocol}//${hostname}:${port}/makeGarmin`;
+	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+	var theJson = await theResp.json();
+	doPrint = false;
+	//Do the upload to Garmin Connect
+	var url = `${protocol}//${hostname}:${port}/uploadToGarmin`;
+	body = {route:theJson.json,token:accessToken};
+	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	
+	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(body),headers:ApiHeaders});
+	var theJson = await theResp.json();
+	if (theJson.status=="OK"){
+	    alert(theJson.message);
+	}
+	else if (theJson.status=="NG" && theJson.message.indexOf("No secret")>=0){
+	    var feedback = "The upload to Garmin Connect has failed.  This RouteLoops session has not yet been connected to Garmin Connect.  Would you like to do that?";
+	    var answer = confirm(feedback);
+	    if (answer) connectToGarmin();
+	    else {
+		var suggestion = "OK.  You can still save routes as GPX or TCX, and upload them directly to Garmin Connect at a later time.";
+		alert(suggestion);
+	    }
+	}
+	else if(theJson.status=="NG"){
+	    alert(`The upload to Garmin Connect has failed with message "${theJson.message}". You might try reconnecting this session to Garmin Connect.`);
+	}
+    }        
 
     if (theJson.status=="OK"){
 
@@ -481,4 +544,80 @@ async function doRemoveWaypoint(lat,lng){
     doRL(currentWaypoints);
 
     return;
+}
+
+//...........................
+async function connectToGarmin(step)
+{
+    if (step!=3){
+	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
+	var data = {};
+	var url = `${protocol}//${hostname}:${port}/garminRequestToken`;
+	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+	var theJson = await theResp.json();
+	console.log(theJson);
+	
+	//Direct the user to log in to Garmin
+	var url = `https://connect.garmin.com/oauthConfirm?oauth_token=${theJson.token}&oauth_callback=${encodeURIComponent(garminCallback)}`;	
+	window.open(url,"_blank");
+    }
+
+    else if (step==3){
+	//alert(urlParams);
+	oauth_token = urlParams.get("oauth_token");
+	oauth_verifier = urlParams.get("oauth_verifier");
+	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
+	var data = {oauth_token:oauth_token,oauth_verifier:oauth_verifier};
+	var url = `${protocol}//${hostname}:${port}/garminRequestAccess`;
+	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+	var theJson = await theResp.json();
+	console.log(theJson);
+	accessToken = theJson.token;
+	if (theJson.status=="OK")alert(`Connection to Garmin Connect established.  Once you have created a route, you can send it to Garmin Connect using the option in the "Output" menu.`);
+	else alert(`Connection to Garmin Connect failed.  You may want to try this again.`);
+    }
+    
+    
+    return;
+}
+
+//..........................................................
+function askAboutGarmin()
+{
+    if (isRedirectFromGarmin) return;
+    else{
+	var comment = "Would you like to log into Garmin before you create any routes, to facilitate easy uploads of routes to Garmin Connect?";
+	var answer = confirm(comment);
+	if (answer) connectToGarmin();
+	else {
+	    var suggestion = "OK.  You can still save routes locally as GPX or TCX, and upload them directly to Garmin Connect at a later time.";
+	    suggestion += "\n If you want to connect later, tap the Garmin/RouteLoops icon at the bottom of the page.";
+	    alert(suggestion);
+	    var theWidth = document.getElementById("yinYang").width;
+	    var theHeight = document.getElementById("yinYang").height;
+	    garminPulses.push({width:theWidth,height:theHeight});
+	    garminPulses.push({width:theWidth*2,height:theHeight*2});
+	    for (var i=0;i<3;i++){
+		garminPulses.push(garminPulses[0]);
+		garminPulses.push(garminPulses[1]);
+	    }
+	    garminPulses.push(garminPulses[0]);
+	    garminPulseIndex = 0;
+	    pulseImage();
+	}
+	return;
+    }
+}
+//............................................................
+function pulseImage(){
+    
+    setTimeout(function(){
+	document.getElementById("yinYang").width  = garminPulses[garminPulseIndex].width;
+	document.getElementById("yinYang").height = garminPulses[garminPulseIndex].height;
+	garminPulseIndex += 1;
+	if (garminPulseIndex<garminPulses.length) pulseImage();
+    },500);
+
+    return;
+
 }

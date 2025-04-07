@@ -5,6 +5,7 @@ import util from 'util';
 import cors from'cors';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 dotenv.config();
 
 var app = express();
@@ -31,6 +32,10 @@ app.post('/makeTCX',makeTCX);
 app.post('/removeWaypoint',removeWaypoint);
 app.post('/addWaypoint',addWaypoint);
 app.get('/readFile',readFile);
+app.post('/makeGarmin',makeGarmin);
+app.post('/uploadToGarmin',uploadToGarmin);
+app.post('/garminRequestToken',garminRequestToken);
+app.post('/garminRequestAccess',garminRequestAccess);
 
 // Setup Server
 const thePort = 8181;
@@ -53,6 +58,26 @@ https.createServer(
   })
 //*/
 
+//Use this to hold the request token, request token secret pairs.
+var secrets = {"310fd994-6c6f-4a38-8582-16cb3edf743b":{secret:"LkjNDk4xZQJyY0S9Wik5KNe6bvG097fuYww",timestamp:1743559197}};
+
+function cleanUpOldSecrets(){
+    //Clean up old secrets
+    var oldestAllowed = 24*60*60;
+    var itIsNow = Math.floor(Date.now()/1000);
+    var removed = 0;
+    for (const token in secrets){
+	if (itIsNow - secrets[token]["timestamp"] > oldestAllowed){
+	    console.log(`Removing the secret associated with token ${token} due to age.`);
+	    delete secrets[token];
+	    removed += 1;
+	}
+    }
+    if (removed==0) console.log(`No tokens have yet aged out.  I am holding onto secrets for ${Object.keys(secrets).length} tokens.`);
+    return;
+}
+cleanUpOldSecrets();
+const cleanUpInterval = setInterval(function(){cleanUpOldSecrets();},24*60*60*1000)    
 
 //.......................................................................
 function info(req,res,next)
@@ -1297,3 +1322,276 @@ async function readFile(req,res,next)
     }
 }
     
+//..............................................................
+function makeGarmin(req,res,next)
+{
+    var method = req.method;
+    var url = req.url;
+    if (method.toLowerCase() == 'get'){
+    }
+    
+    else if (method.toLowerCase() == 'post'){
+	
+	var body = req.body;
+	
+	var allPoints = body.allPoints;
+	var status = "OK";
+	var courseName = body.name;
+	
+	var currentTime = new Date();
+	var year = currentTime.getFullYear();
+	var month = currentTime.getMonth() + 1;
+	var day = currentTime.getDate();
+	var hour = currentTime.getHours();
+	var minute = currentTime.getMinutes();
+	var name = "RL-" + year + "-" + padZeros(month,2) + "-" + padZeros(day,2) + "-" + padZeros(hour,2) + padZeros(minute,2);
+	var ymd = year + "-" + padZeros(month,2) + "-" + padZeros(day,2);
+	if (courseName.length==0) courseName = name;
+	var CourseJSON = {};
+	CourseJSON.courseName = courseName;
+	var totalDistanceKm = allPoints[allPoints.length-1].cumulativeDistanceKm;
+	CourseJSON.distance = totalDistanceKm*1000;
+	CourseJSON.elevationGain = 0;
+	CourseJSON.elevationLoss = 0;
+	CourseJSON.geoPoints = [];
+	for (const point of allPoints) CourseJSON.geoPoints.push({latitude:point.lat,longitude:point.lng,elevation:0});
+	CourseJSON.activityType = "ROAD_CYCLING";
+	CourseJSON.coordinateSystem = "WGS84";
+	
+	res.json({status:status,json:CourseJSON,name:courseName});
+    }
+}
+
+//..............................................................
+async function uploadToGarmin(req,res,next)
+{
+    var method = req.method;
+    var url = req.url;
+    if (method.toLowerCase() == 'get'){
+    }
+    
+    else if (method.toLowerCase() == 'post'){
+	
+	var body = req.body;
+	
+	var route = body.route;
+	var accessToken = body.token;
+	var status = "OK";
+
+	const garminKey =         process.env.GARMIN_CONSUMER_KEY;	
+	const garminSecret =      process.env.GARMIN_CONSUMER_SECRET;
+	const nonce = Math.floor(Math.random() * 9000000000) + 1000000000;
+	const timestamp = Math.floor(Date.now()/1000);
+	
+	if (secrets.hasOwnProperty(accessToken)){
+	    const tokenSecret = secrets[accessToken]["secret"];
+
+	    var url = 'https://apis.garmin.com/training-api/courses/v1/course';
+	    var urlString = encodeURIComponent(url);
+
+	    //The first thing we have to do is to generate the OAuth signature.
+	    //Base String
+	    const baseString = `POST&${urlString}&oauth_consumer_key%3D${garminKey}%26oauth_nonce%3D${nonce}%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D${timestamp}%26oauth_token%3D${accessToken}%26oauth_version%3D1.0`;
+	    console.log(baseString);
+	    //Signing key
+	    const signingKey = `${garminSecret}&${tokenSecret}`;
+	    console.log(signingKey);
+
+	    // Generate HMAC-SHA1 signature
+	    const signature = crypto.createHmac('sha1', signingKey)
+		  .update(baseString)
+		  .digest('base64');
+	    
+	    console.log("OAuth Signature:", signature);
+	    console.log("OAuth Signature:", encodeURIComponent(signature));
+
+	    //With this, we can generate the token
+	    
+	    const ApiHeaders = {
+		'Authorization': `OAuth oauth_nonce=${nonce},oauth_signature=${encodeURIComponent(signature)}, oauth_token=${accessToken}, oauth_consumer_key=${garminKey}, oauth_timestamp=${timestamp}, oauth_signature_method="HMAC-SHA1", oauth_version="1.0"`,
+		'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+		'Content-Type': 'application/json; charset=utf-8'};
+	    
+	    var response = await fetch(url,{method:'POST',body:JSON.stringify(route),headers:ApiHeaders});	
+	    var theText = await response.text();
+	    //console.log(theText);
+	    //var theJson = await response.json();
+	    //console.log(theJson);
+	    var theJson = JSON.parse(theText);
+	    //console.log(theJson);
+	    status = "NG";	    
+	    try{
+		var message = `Created course ${theJson.courseName} of distance ${theJson.distance} with ${theJson.geoPoints.length} points.`;
+		status = "OK";
+		console.log(message);
+	    }
+	    catch(err){
+		console.log(`Error ${err} trying to create course.`);
+	    }
+	    if (status=="NG") message = err;
+	    
+	    res.json({status:status,message:message});
+	}
+
+	else{
+	    var message = "No secret for this access token";
+	    console.log(message);
+	    res.json({status:"NG",message:message});
+	}
+    }
+}
+
+//..........................................................................
+async function garminRequestToken(req,res,next)
+{
+    var method = req.method;
+    var url = req.url;
+    if (method.toLowerCase() == 'get'){
+    }
+    else if (method.toLowerCase() == 'post'){
+
+	const garminKey =         process.env.GARMIN_CONSUMER_KEY;	
+	const garminSecret =      process.env.GARMIN_CONSUMER_SECRET;
+	const nonce = Math.floor(Math.random() * 9000000000) + 1000000000;
+	//const nonce = "3486247413";
+	const timestamp = Math.floor(Date.now()/1000);
+	//const timestamp = "1743365320";
+	const tokenSecret = "";
+
+	var url = 'https://connectapi.garmin.com/oauth-service/oauth/request_token';
+	var urlString = encodeURIComponent(url);
+
+	//The first thing we have to do is to generate the OAuth signature.
+	//Base String
+	const baseString = `POST&${urlString}&oauth_consumer_key%3D${garminKey}%26oauth_nonce%3D${nonce}%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D${timestamp}%26oauth_version%3D1.0`;
+	//console.log(baseString);
+
+	//Signing key
+	const signingKey = `${garminSecret}&${tokenSecret}`;
+
+	// Generate HMAC-SHA1 signature
+	const signature = crypto.createHmac('sha1', signingKey)
+              .update(baseString)
+              .digest('base64');
+	
+	//console.log("OAuth Signature:", signature);
+
+	//With this, we can generate the token
+	
+	const ApiHeaders = {
+	    'Authorization': `OAuth oauth_nonce=${nonce},oauth_signature=${encodeURIComponent(signature)}, oauth_consumer_key=${garminKey}, oauth_timestamp=${timestamp}, oauth_signature_method="HMAC-SHA1", oauth_version="1.0"`,
+	    'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+	    'Content-Type': 'application/json; charset=utf-8'};
+	
+	var data = {};
+	var url = 'https://connectapi.garmin.com/oauth-service/oauth/request_token';
+	var response = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+	//console.log(response);
+	//console.log(response.body);
+	var theText = await response.text();
+	console.log(theText);
+	var split1 = theText.split("&");
+	var tokenside = split1[0];
+	var split2 = tokenside.split("=");
+	var oauth_token = split2[1];
+	var secretside = split1[1];
+	var split3 = secretside.split("=");
+	var oauth_token_secret = split3[1];
+	console.log(`OAUTH token is ${oauth_token}, while the OAUTH token secret is ${oauth_token_secret}`);
+	secrets[oauth_token] = {secret:oauth_token_secret,timestamp:timestamp};
+	
+	//var theJson = await response.json();
+	//console.log(theJson);
+	res.json({token:oauth_token});
+    }
+}
+
+//..........................................................................
+async function garminRequestAccess(req,res,next)
+{
+    var method = req.method;
+    var url = req.url;
+    if (method.toLowerCase() == 'get'){
+    }
+    else if (method.toLowerCase() == 'post'){
+
+	var body = req.body;
+	
+	const garminKey =         process.env.GARMIN_CONSUMER_KEY;	
+	const garminSecret =      process.env.GARMIN_CONSUMER_SECRET;
+	const nonce = Math.floor(Math.random() * 9000000000) + 1000000000;
+	const timestamp = Math.floor(Date.now()/100);
+	const oauth_token = (body.oauth_token);
+	const oauth_verifier = (body.oauth_verifier);
+	
+	//Find the secret
+	if (secrets.hasOwnProperty(oauth_token)){
+	    const tokenSecret = secrets[oauth_token]["secret"];
+
+	    //const nonce = "1874841822";
+	    //const timestamp="1743385244";
+	    //const oauth_token="310fd994-6c6f-4a38-8582-16cb3edf743b";
+	    //const oauth_verifier="JtwjHkGzrO";
+	    //Signature should be dotUvBuAr56JeDGUuQwczSHpqO4
+
+	    
+	    //console.log(`I have a token of ${oauth_token} and a verifier of ${oauth_verifier}, with a secret of ${tokenSecret}`);
+
+	    var url = 'https://connectapi.garmin.com/oauth-service/oauth/access_token';
+	    var urlString = encodeURIComponent(url);
+
+	    //The first thing we have to do is to generate the OAuth signature.
+	    //Base String
+	    const baseString = `POST&${urlString}&oauth_consumer_key%3D${garminKey}%26oauth_nonce%3D${nonce}%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D${timestamp}%26oauth_token%3D${oauth_token}%26oauth_verifier%3D${oauth_verifier}%26oauth_version%3D1.0`;
+	    //console.log(baseString);
+	    //Signing key
+	    const signingKey = `${garminSecret}&${tokenSecret}`;
+	    // Generate HMAC-SHA1 signature
+	    const signature = crypto.createHmac('sha1', signingKey)
+		  .update(baseString)
+		  .digest('base64');
+	    //console.log("OAuth Signature:", signature);	
+
+	    //Now get the access token
+	    
+	    const ApiHeaders = {
+		'Authorization': `OAuth oauth_nonce=${nonce}, oauth_signature=${encodeURIComponent(signature)}, oauth_consumer_key=${garminKey}, oauth_token=${oauth_token}, oauth_timestamp=${timestamp}, oauth_verifier=${oauth_verifier}, oauth_signature_method="HMAC-SHA1", oauth_version="1.0"`,
+		'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+		'Content-Type': 'application/json; charset=utf-8'};
+	    
+	    var data = {};
+	    var response = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+	    //console.log(response);
+	    //console.log(response.body);
+	    var theText = await response.text();
+	    //console.log(theText);
+	    try{
+		var split1 = theText.split("&");
+		var tokenside = split1[0];
+		var split2 = tokenside.split("=");
+		var access_token = split2[1];
+		var secretside = split1[1];
+		var split3 = secretside.split("=");
+		var access_token_secret = split3[1];
+		//console.log(`ACCESS token is ${access_token}, while the ACCESS token secret is ${access_token_secret}`);
+
+		//Clean this up
+		delete secrets[oauth_token];
+		//console.log(secrets);
+		
+		secrets[access_token] = {secret:access_token_secret,timestamp:timestamp};
+		//var theJson = await response.json();
+		//console.log(theJson);
+		res.json({status:"OK",token:access_token});
+	    }
+	    catch(err){
+		res.json({status:"NG",token:null});
+		console.log("Creation of a user access token did NOT succeed.");
+	    }
+	}
+
+	else{
+	    res.json({status:"NG",message:`No token secret found for this oauth, ${oauth_token}`, token:null});
+	}
+    }
+}
