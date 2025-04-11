@@ -508,6 +508,21 @@ async function generateOutput()
 }
 
 //..................................................................
+async function disconnectFromGarmin()
+{
+    //Disconnect this session from Garmin Connect
+    var url = `${protocol}//${hostname}:${port}/uploadToGarmin`;
+    body = {route:null,token:accessToken};
+    var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	
+    var theResp = await fetch(url,{method:'POST',body:JSON.stringify(body),headers:ApiHeaders});
+    var theJson = await theResp.json();
+    if (theJson.status=="OK"){
+	alert(theJson.message);
+    }
+    return;
+}
+
+//..................................................................
 function reverseRoute(){
     if (currentWaypoints.length==0) return;
     else{

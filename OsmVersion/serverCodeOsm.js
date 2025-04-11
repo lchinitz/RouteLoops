@@ -1442,24 +1442,33 @@ async function uploadToGarmin(req,res,next)
 		'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
 		'Content-Type': 'application/json; charset=utf-8'};
 	    
-	    var response = await fetch(url,{method:'POST',body:JSON.stringify(route),headers:ApiHeaders});	
-	    var theText = await response.text();
-	    //console.log(theText);
-	    //var theJson = await response.json();
-	    //console.log(theJson);
-	    var theJson = JSON.parse(theText);
-	    //console.log(theJson);
-	    status = "NG";	    
-	    try{
-		var message = `Created course ${theJson.courseName} of distance ${theJson.distance} with ${theJson.geoPoints.length} points.`;
+	    if (route==null) {//Use this as a deregistration message
+		console.log(`Deregistering the session from Garmin Connect using URL ${url}`);
+		var response = await(fetch,url,{method:'GET',headers:ApiHeaders});
+		//console.log(response);
+		delete secrets[accessToken];
 		status = "OK";
-		console.log(message);
+		var message = "Session deregistered from Garmin Connect";
 	    }
-	    catch(err){
-		console.log(`Error ${err} trying to create course.`);
-	    }
-	    if (status=="NG") message = err;
-	    
+	    else{ //This is an actual route upload
+		var response = await fetch(url,{method:'POST',body:JSON.stringify(route),headers:ApiHeaders});
+		var theText = await response.text();
+		//console.log(theText);
+		//var theJson = await response.json();
+		//console.log(theJson);
+		var theJson = JSON.parse(theText);
+		//console.log(theJson);
+		status = "NG";	    
+		try{
+		    var message = `Created course ${theJson.courseName} of distance ${theJson.distance} with ${theJson.geoPoints.length} points.`;
+		    status = "OK";
+		    console.log(message);
+		}
+		catch(err){
+		    console.log(`Error ${err} trying to create course.`);
+		}
+		if (status=="NG") message = err;
+	    }    
 	    res.json({status:status,message:message});
 	}
 
