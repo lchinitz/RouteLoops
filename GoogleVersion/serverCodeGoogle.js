@@ -38,6 +38,7 @@ app.post('/makeGarmin',makeGarmin);
 app.post('/uploadToGarmin',uploadToGarmin);
 app.post('/garminRequestToken',garminRequestToken);
 app.post('/garminRequestAccess',garminRequestAccess);
+app.get('/receiveFromGarmin',receiveFromGarmin);
 
 // Setup Server
 const thePort = 8282
@@ -1319,7 +1320,7 @@ async function uploadToGarmin(req,res,next)
 	var body = req.body;
 	
 	var route = body.route;
-	var accessToken = body.token;
+	var oauthToken = body.token;
 	var status = "OK";
 
 	const garminKey =         process.env.GARMIN_CONSUMER_KEY;	
@@ -1327,8 +1328,9 @@ async function uploadToGarmin(req,res,next)
 	const nonce = Math.floor(Math.random() * 9000000000) + 1000000000;
 	const timestamp = Math.floor(Date.now()/1000);
 	
-	if (secrets.hasOwnProperty(accessToken)){
-	    const tokenSecret = secrets[accessToken]["secret"];
+	if (secrets.hasOwnProperty(oauthToken)){
+	    const accessToken = secrets[oauthToken]["access_token"];
+	    const tokenSecret = secrets[oauthToken]["access_token_secret"];
 
 	    var url = 'https://apis.garmin.com/training-api/courses/v1/course';
 	    var urlString = encodeURIComponent(url);
@@ -1360,7 +1362,7 @@ async function uploadToGarmin(req,res,next)
 		console.log(`Deregistering the session from Garmin Connect using URL ${url}`);
 		var response = await(fetch,url,{method:'GET',headers:ApiHeaders});
 		//console.log(response);
-		delete secrets[accessToken];
+		delete secrets[oauthToken];
 		status = "OK";
 		var message = "Session deregistered from Garmin Connect";
 	    }
@@ -1529,10 +1531,13 @@ async function garminRequestAccess(req,res,next)
 		//console.log(`ACCESS token is ${access_token}, while the ACCESS token secret is ${access_token_secret}`);
 
 		//Clean this up
-		delete secrets[oauth_token];
+		//delete secrets[oauth_token];
 		//console.log(secrets);
 		
-		secrets[access_token] = {secret:access_token_secret,timestamp:timestamp};
+		//secrets[access_token] = {secret:access_token_secret,timestamp:timestamp};
+		secrets[oauth_token]["access_token"] = access_token;
+		secrets[oauth_token]["access_token_secret"] = access_token_secret;
+
 		//var theJson = await response.json();
 		//console.log(theJson);
 		res.json({status:"OK",token:access_token});
@@ -1547,4 +1552,121 @@ async function garminRequestAccess(req,res,next)
 	    res.json({status:"NG",message:`No token secret found for this oauth, ${oauth_token}`, token:null});
 	}
     }
+}
+//....................................................................................
+async function receiveFromGarmin(req,res,next)
+{
+
+    var method = req.method;
+    var url = req.url;
+    
+    if (method.toLowerCase() == 'get'){
+        console.log('url ' + url);
+        var split1 = url.split('?');
+        var result = {oauth_token:null,oauth_verifier:null};
+        if(split1.length>1){
+	    var query = split1[1];
+	    var split2 = query.split('&');
+	    for(var i=0;i<split2.length;i++)
+	    {
+                var split3 = split2[i].split('=');
+                if(split3[0] == 'oauth_token')      result.oauth_token      = split3[1];
+                if(split3[0] == 'oauth_verifier')   result.oauth_verifier   = split3[1];
+	    }
+	}
+	var status = "NG";
+	var message = "Connection to Garmin Connect has failed.  Maybe try again?";
+	//res.json({status:status, contents:data});
+	console.log(secrets);
+	console.log(result);
+	if (secrets.hasOwnProperty(result.oauth_token)){
+	    secrets[result.oauth_token]["oauth_verifier"] = result.oauth_verifier;
+	    var retObj = {access_token:null,access_token_secret:null};
+	    retObj = await garminRequestAccessLocal(result.oauth_token,result.oauth_verifier);
+	    console.log(retObj);
+	    if (retObj.access_token != null && retObj.access_token_secret != null){
+		status = "OK";
+		message = "Connection to Garmin Connect successful!";
+	    }
+	}
+	console.log(secrets);	
+	res.status(200).json(message);
+    }
+
+    else if (method.toLowerCase() == 'post'){
+    }
+}
+
+//..................................................................................................
+async function garminRequestAccessLocal(oauth_token,oauth_verifier)
+{
+    const garminKey =         process.env.GARMIN_CONSUMER_KEY;	
+    const garminSecret =      process.env.GARMIN_CONSUMER_SECRET;
+    const nonce = Math.floor(Math.random() * 9000000000) + 1000000000;
+    const timestamp = Math.floor(Date.now()/100);
+    //const oauth_token = (body.oauth_token);
+    //const oauth_verifier = (body.oauth_verifier);
+    
+    //Find the secret
+    if (secrets.hasOwnProperty(oauth_token)){
+	const tokenSecret = secrets[oauth_token]["secret"];	
+	//console.log(`I have a token of ${oauth_token} and a verifier of ${oauth_verifier}, with a secret of ${tokenSecret}`);
+
+	var url = 'https://connectapi.garmin.com/oauth-service/oauth/access_token';
+	var urlString = encodeURIComponent(url);
+
+	//The first thing we have to do is to generate the OAuth signature.
+	//Base String
+	const baseString = `POST&${urlString}&oauth_consumer_key%3D${garminKey}%26oauth_nonce%3D${nonce}%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D${timestamp}%26oauth_token%3D${oauth_token}%26oauth_verifier%3D${oauth_verifier}%26oauth_version%3D1.0`;
+	//console.log(baseString);
+	//Signing key
+	const signingKey = `${garminSecret}&${tokenSecret}`;
+	// Generate HMAC-SHA1 signature
+	const signature = crypto.createHmac('sha1', signingKey)
+	      .update(baseString)
+	      .digest('base64');
+	//console.log("OAuth Signature:", signature);	
+
+	//Now get the access token
+	
+	const ApiHeaders = {
+	    'Authorization': `OAuth oauth_nonce=${nonce}, oauth_signature=${encodeURIComponent(signature)}, oauth_consumer_key=${garminKey}, oauth_token=${oauth_token}, oauth_timestamp=${timestamp}, oauth_verifier=${oauth_verifier}, oauth_signature_method="HMAC-SHA1", oauth_version="1.0"`,
+	    'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+	    'Content-Type': 'application/json; charset=utf-8'};
+	
+	var data = {};
+	var response = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
+	//console.log(response);
+	//console.log(response.body);
+	var theText = await response.text();
+	//console.log(theText);
+	var retObj = {access_token:null,access_token_secret:null};
+	try{
+	    var split1 = theText.split("&");
+	    var tokenside = split1[0];
+	    var split2 = tokenside.split("=");
+	    var access_token = split2[1];
+	    var secretside = split1[1];
+	    var split3 = secretside.split("=");
+	    var access_token_secret = split3[1];
+	    //console.log(`ACCESS token is ${access_token}, while the ACCESS token secret is ${access_token_secret}`);
+
+	    //Clean this up
+	    //delete secrets[oauth_token];
+	    //console.log(secrets);
+	    
+	    //secrets[access_token] = {secret:access_token_secret,timestamp:timestamp};
+	    secrets[oauth_token]["access_token"] = access_token;
+	    secrets[oauth_token]["access_token_secret"] = access_token_secret;
+	    //var theJson = await response.json();
+	    //console.log(theJson);
+	    retObj = {access_token:access_token,access_token_secret:access_token_secret};
+	    
+	}
+	catch(err){
+	    console.log("Creation of a user access token did NOT succeed.");
+	}
+    }
+    
+    return retObj;
 }

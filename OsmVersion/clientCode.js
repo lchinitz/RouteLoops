@@ -12,6 +12,7 @@ var homeMarker;
 const { protocol, hostname, port } = window.location;
 const urlParams = new URLSearchParams(window.location.search);
 var accessToken = null;
+var oauthToken = null;
 var isRedirectFromGarmin = false;
 var garminCallback;
 var garminPulses = [];
@@ -23,7 +24,10 @@ async function initMap()
     const height = window.innerHeight;
 
     if (urlParams.has("oauth_token") && urlParams.has("oauth_verifier")) isRedirectFromGarmin=true;
-    garminCallback = `${protocol}//${hostname}:${port}/index.html`;    
+    if (hostname.indexOf("localhost")>=0)
+	garminCallback = `${protocol}//${hostname}:${port}/index-DoNotPush.html`;
+    else
+	garminCallback = `${protocol}//${hostname}:${port}/receiveFromGarmin`;    
 
     if (!isRedirectFromGarmin){
 	//var announcementURL = `${protocol}//${hostname}:${port}/announcement.html`;
@@ -62,7 +66,7 @@ async function initMap()
     var routerToUse = null;
     if (theRouter=="OSM") routerToUse = new L.Routing.OSRMv1({"profile": `${theMode}`});
     if (theRouter=="MapBox"){
-	var theToken = 'A Valid Token';
+	var theToken = 'A valid token';
 	var theProfile = "cycling";
 	if (theMode.indexOf("driving")>=0) theProfile = "driving";
 	if (theMode.indexOf("cycling")>=0) theProfile = "cycling";
@@ -490,7 +494,7 @@ async function generateOutput()
 	doPrint = false;
 	//Do the upload to Garmin Connect
 	var url = `${protocol}//${hostname}:${port}/uploadToGarmin`;
-	body = {route:theJson.json,token:accessToken};
+	body = {route:theJson.json,token:oauthToken};
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(body),headers:ApiHeaders});
 	var theJson = await theResp.json();
@@ -510,6 +514,24 @@ async function generateOutput()
 	    alert(`The upload to Garmin Connect has failed with message "${theJson.message}". You might try reconnecting this session to Garmin Connect.`);
 	}
     }
+
+    if (theType=="google"){
+	doPrint = false;
+	var start = `${allPoints[0].lat},${allPoints[0].lng}`;
+	var destination = `${allPoints[0].lat},${allPoints[0].lng}`;
+	var waypoints = "";
+	for (const waypoint of currentWaypoints) waypoints += `${waypoint.lat},${waypoint.lng}|`;
+	waypoints = waypoints.slice(0,-1);
+	var inputMode = document.getElementById("inputMode").value;
+	var travelmode = "bicycling";
+	if (inputMode.indexOf("driving")>=0) travelmode = "driving";
+	if (inputMode.indexOf("foot")>=0) travelmode = "walking";
+	const url = `https://www.google.com/maps/dir/?api=1&origin=${start}&destination=${destination}&waypoints=${waypoints}&dir_action=navigate&travelmode=${travelmode}`;
+	alert(`This will open a new window with the "anchor" points displayed on Google Maps.  Google will do its own routing, which is very likely NOT going to be the same as the RouteLoops routing.`);
+	window.open(url,'_blank');
+	var theJson = {status:"google"};
+    }
+	
     
 
     if (theJson.status=="OK"){
@@ -559,7 +581,7 @@ async function disconnectFromGarmin()
 {
     //Disconnect this session from Garmin Connect
     var url = `${protocol}//${hostname}:${port}/uploadToGarmin`;
-    body = {route:null,token:accessToken};
+    body = {route:null,token:oauthToken};
     var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};	
     var theResp = await fetch(url,{method:'POST',body:JSON.stringify(body),headers:ApiHeaders});
     var theJson = await theResp.json();
@@ -647,6 +669,7 @@ async function connectToGarmin(step)
 	var theResp = await fetch(url,{method:'POST',body:JSON.stringify(data),headers:ApiHeaders});
 	var theJson = await theResp.json();
 	console.log(theJson);
+	if (theJson.hasOwnProperty("token")) oauthToken = theJson.token;
 	
 	//Direct the user to log in to Garmin
 	var url = `https://connect.garmin.com/oauthConfirm?oauth_token=${theJson.token}&oauth_callback=${encodeURIComponent(garminCallback)}`;	
@@ -657,6 +680,7 @@ async function connectToGarmin(step)
 	//alert(urlParams);
 	oauth_token = urlParams.get("oauth_token");
 	oauth_verifier = urlParams.get("oauth_verifier");
+	oauthToken = oauth_token;
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
 	var data = {oauth_token:oauth_token,oauth_verifier:oauth_verifier};
 	var url = `${protocol}//${hostname}:${port}/garminRequestAccess`;
