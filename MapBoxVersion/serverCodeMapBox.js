@@ -37,6 +37,7 @@ app.post('/uploadToGarmin',uploadToGarmin);
 app.post('/garminRequestToken',garminRequestToken);
 app.post('/garminRequestAccess',garminRequestAccess);
 app.get('/receiveFromGarmin',receiveFromGarmin);
+app.all('/garminDeregister',garminDeregister);
 
 // Setup Server
 const thePort = 8181;
@@ -1725,4 +1726,98 @@ async function garminRequestAccessLocal(oauth_token,oauth_verifier)
     }
     
     return retObj;
+}
+
+//.................................................................
+async function garminDeregister(req,res,next)
+{
+
+    var method = req.method;
+    var url = req.url;
+    console.log(`Method ${method}, URL ${url}`);
+
+    var userAccessToken = null;
+    var userId = null;
+
+    if (method.toLowerCase() == 'post'){
+    	var body = req.body;
+	console.log("Got a deregistration from Garmin");
+	console.log(body);
+	
+	const garminKey =         process.env.GARMIN_CONSUMER_KEY;	
+	const garminSecret =      process.env.GARMIN_CONSUMER_SECRET;
+	const nonce = Math.floor(Math.random() * 9000000000) + 1000000000;
+	const timestamp = Math.floor(Date.now()/100);
+	try{
+	    userAccessToken = (body.userAccessToken);
+	    userId = (body.userId);
+	}
+	catch(err){
+	    console.log(body);
+	}
+    }
+
+    if (userAccessToken != null){
+	//See if you have this access token.
+	var found = false;
+	for (const oauthToken in secrets){
+	    var thisSecret = secrets[oauthToken];
+	    if (thisSecret.hasOwnProperty("access_token")){
+		if (thisSecret["access_token"] = userAccessToken){
+		    var accessToken = thisSecret["access_token"];
+		    var tokenSecret = thisSecret["access_token_secret"];
+		    var oauth_token = oauthToken;
+		    found = true;
+		    break;
+		}
+	    }
+	}
+
+	if (found){
+	    
+	    var url = 'https://apis.garmin.com/training-api/courses/v1/course';
+	    var urlString = encodeURIComponent(url);
+
+	    //The first thing we have to do is to generate the OAuth signature.
+	    //Base String
+	    const baseString = `POST&${urlString}&oauth_consumer_key%3D${garminKey}%26oauth_nonce%3D${nonce}%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D${timestamp}%26oauth_token%3D${accessToken}%26oauth_version%3D1.0`;
+	    console.log(baseString);
+	    //Signing key
+	    const signingKey = `${garminSecret}&${tokenSecret}`;
+	    console.log(signingKey);
+
+	    // Generate HMAC-SHA1 signature
+	    const signature = crypto.createHmac('sha1', signingKey)
+		  .update(baseString)
+		  .digest('base64');
+	    
+	    console.log("OAuth Signature:", signature);
+	    console.log("OAuth Signature:", encodeURIComponent(signature));
+
+	    //With this, we can generate the token
+	    
+	    const ApiHeaders = {
+		'Authorization': `OAuth oauth_nonce=${nonce},oauth_signature=${encodeURIComponent(signature)}, oauth_token=${accessToken}, oauth_consumer_key=${garminKey}, oauth_timestamp=${timestamp}, oauth_signature_method="HMAC-SHA1", oauth_version="1.0"`,
+		'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+		'Content-Type': 'application/json; charset=utf-8'};
+	    
+	    console.log(`Deregistering the session from Garmin Connect using URL ${url}`);
+	    var response = await(fetch,url,{method:'GET',headers:ApiHeaders});
+	    //console.log(response);
+	    delete secrets[oauthToken];
+	    status = "OK";
+	    var message = "Session deregistered from Garmin Connect";
+	}
+	else{
+	    console.log(`Access token ${userAccessToken} not found`);
+	}
+    }
+    else{
+	console.log(`Access token not provided.  Value is ${userAccessToken} in this ${method} call to ${url}`);
+    }
+	
+
+    var message = "Garmin Deregistration";
+    res.status(200).json(message);
+    
 }
