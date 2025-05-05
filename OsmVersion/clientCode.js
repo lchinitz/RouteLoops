@@ -1,5 +1,6 @@
 //Include valid tokens for routers, if required.
 //Also, adjust the callback
+//Adjust all DoNotPush
 
 var map,RoutingControl;
 var rlPath,rawPath,guidepointPath;
@@ -14,9 +15,11 @@ const urlParams = new URLSearchParams(window.location.search);
 var accessToken = null;
 var oauthToken = null;
 var isRedirectFromGarmin = false;
+var hasRouteLink = false;
 var garminCallback;
 var garminPulses = [];
 var garminPulseIndex;
+var theConfiguration = {};
 
 async function initMap()
 {
@@ -25,11 +28,13 @@ async function initMap()
 
     if (urlParams.has("oauth_token") && urlParams.has("oauth_verifier")) isRedirectFromGarmin=true;
     if (hostname.indexOf("localhost")>=0)
-	garminCallback = `${protocol}//${hostname}:${port}/index-DoNotPush.html`;
+	garminCallback = `${protocol}//${hostname}:${port}/index.html`;
     else
-	garminCallback = `${protocol}//${hostname}:${port}/receiveFromGarmin`;    
+	garminCallback = `${protocol}//${hostname}:${port}/receiveFromGarmin`;
 
-    if (!isRedirectFromGarmin){
+    if (urlParams.has("routeLink")) hasRouteLink = true;
+
+    if (!isRedirectFromGarmin && !hasRouteLink){
 	//var announcementURL = `${protocol}//${hostname}:${port}/announcement.html`;
 	//window.open(announcementURL,"A RouteLoops Announcement",`height=${height*0.95},width=${width*0.60},left=300,menubar=no,location=no,status=no,titlebar=no,top=100`);
 	var url = `${protocol}//${hostname}:${port}/readFile?fileName=announcement.html`;
@@ -170,6 +175,10 @@ async function initMap()
 	}
     }
 
+    if (hasRouteLink){
+	useRouteLink();
+    }
+
     return;
 }
 //--------------------------------------
@@ -216,6 +225,52 @@ function lockRoute(){
     }
     return;
 }
+//.........................................
+async function setAsHome()
+{
+    try{homeMarker.remove();}catch(err){}
+    
+    //Find the starting point of the RouteLoop
+    var theLocation = document.getElementById("inputLocation").value;
+    var areCoords = false;
+    try{
+	var items = theLocation.split(",");
+	if (items[0].toLowerCase().indexOf("s")>=0) items[0] = ("-" + items[0]).replaceAll(" ","");
+	if (items[1].toLowerCase().indexOf("w")>=0) items[1] = ("-" + items[1]).replaceAll(" ","");
+	var lat = parseFloat(items[0]);
+	var lng = parseFloat(items[1]);
+	if (items.length==2 && !isNaN(items[0]) && !isNaN(items[1])) areCoords = true
+	var theLatLng = {lat:lat,lng:lng};
+    }
+    catch(err){}
+
+    if (!areCoords){
+	var encoded = encodeURI(theLocation);
+
+	//Geocode this starting location in to a Lat/Lng pair.
+	var url = `${protocol}//${hostname}:${port}/geocode?location=${encoded}`;
+	var theResp = await fetch(url);
+	var theJson = await theResp.json();    
+	var theLatLng = {lat:theJson.features[0].geometry.coordinates[1],lng:theJson.features[0].geometry.coordinates[0]};
+    }
+
+    //Center the map on this location.
+    if (typeof waypointsIn == "undefined")
+	map.setView(new L.LatLng(theLatLng.lat,theLatLng.lng),18);
+
+    //Put a house marker at the start/end point.
+    var homeIcon = L.icon({
+	iconUrl: './images/Home.png'	
+    });
+
+    homeMarker = L.marker([theLatLng.lat, theLatLng.lng], {icon: homeIcon,draggable:true,title:theLocation}).addTo(map);
+    homeMarker.on("dragend", function(e) {
+	var position = homeMarker.getLatLng();
+	document.getElementById("inputLocation").value = `${position.lat},${position.lng}`;
+	map.setView(position,18);
+    });
+    return {theLocation,theLatLng};
+}
 //........................................................................................
 async function doRL(waypointsIn)
 {
@@ -225,7 +280,9 @@ async function doRL(waypointsIn)
     try{map.removeLayer(rawPath);}catch(err){}
     try{map.removeLayer(guidepointPath);}catch(err){}
     try{homeMarker.remove();}catch(err){}
-    
+
+    var {theLocation,theLatLng} = await setAsHome();
+    /*
     //Find the starting point of the RouteLoop
     var theLocation = document.getElementById("inputLocation").value;
     var encoded = encodeURI(theLocation);
@@ -243,9 +300,10 @@ async function doRL(waypointsIn)
     //Put a house marker at the start/end point.
     var homeIcon = L.icon({
 	iconUrl: './images/Home.png'	
-    });
+	});
 
-    homeMarker = L.marker([theLatLng.lat, theLatLng.lng], {icon: homeIcon,draggable:true,title:theLocation}).addTo(map);
+    homeMarker = L.marker([theLatLng.lat, theLatLng.lng], {icon: homeIcon,draggable:true,title:theLocation}).addTo(map);    
+    */
 
     var initialWaypoints = [];
     if (typeof waypointsIn == "undefined"){    
@@ -316,9 +374,15 @@ async function doRL(waypointsIn)
 	rawPath = new L.Polyline(rawPoints,{color:'green',weight:2,opacity:1.0,smoothFactor:1});
 	rawPath.addTo(map);
 	
+	var cleanTailsJson = {cleanedUp:0,distKm:allPoints[allPoints.length-1].cumulativeDistanceKm,newPath:allPoints};
+
 	//Call a cleaning function until the result stabilizes
 	var ApiHeaders =  {'Accept': 'application/json','Content-Type': 'application/json'};
 	var keepGoing = true;
+	if (hasRouteLink) {
+	    keepGoing = false;
+	    hasRouteLink = false; //Reset this so that from now on it will perform the route cleaning
+	}
 	var countCalcs = 0;
 	var waypoints = [];
 	for (const waypoint of initialWaypoints) waypoints.push(waypoint);
@@ -532,6 +596,11 @@ async function generateOutput()
 	var theJson = {status:"google"};
     }
 	
+    if (theType=="link"){
+	saveConfiguration();
+	doPrint = false;
+	var theJson = {status:"link"};
+    }
     
 
     if (theJson.status=="OK"){
@@ -698,7 +767,7 @@ async function connectToGarmin(step)
 //..........................................................
 function askAboutGarmin()
 {
-    if (isRedirectFromGarmin) return;
+    if (isRedirectFromGarmin || hasRouteLink) return;
     else{
 	var comment = `Do you plan to upload this route to Garmin Connect?  If so, click "OK" to login now, to make the process easier.`;
 	var answer = confirm(comment);
@@ -734,4 +803,80 @@ function pulseImage(){
 
     return;
 
+}
+
+//............................................................
+function saveConfiguration(){
+
+    theConfiguration = {};
+    theConfiguration.inputLocation = document.getElementById("inputLocation").value;
+    theConfiguration.inputDist = document.getElementById("inputDist").value;
+    theConfiguration.inputUnits = document.getElementById("inputUnits").value;
+    theConfiguration.inputMode = document.getElementById("inputMode").value;
+    theConfiguration.fitnessLevel = document.getElementById("fitnessLevel").value;
+    theConfiguration.greenFactor = document.getElementById("greenFactor").value;
+    theConfiguration.quietFactor = document.getElementById("quietFactor").value;
+    theConfiguration.inputRotation = document.getElementById("inputRotation").value;
+    theConfiguration.inputDirection = document.getElementById("inputDirection").value;
+    theConfiguration.method = document.getElementById("method").value;
+    theConfiguration.inputHighways = document.getElementById("inputHighways").value;
+    theConfiguration.inputFerries = document.getElementById("inputFerries").value;
+    theConfiguration.currentWaypoints = currentWaypoints;
+
+    var theLink = "";
+    theLink = `${protocol}//${hostname}:${port}/index.html`;
+    theLink += "?routeLink=true";
+    for (const item in theConfiguration){
+	if (item != "currentWaypoints") theLink += `&${item}=${theConfiguration[item]}`;
+    }
+    if (currentWaypoints.length>0){
+	var text = "";
+	for (const waypoint of currentWaypoints) text += `${waypoint.lat},${waypoint.lng}|`;
+	text = text.slice(0,-1);
+	theLink += `&waypoints=${text}`;
+    }
+
+    console.log(theLink);
+   
+    const newWindow = window.open('', '_blank', 'width=800,height=200');
+    if (newWindow) {
+	newWindow.document.open();
+	newWindow.document.write(theLink);
+	//newWindow.document.close();
+    } else {
+	alert('Popup blocked! Please allow popups for this site.');
+    }
+    
+    return;
+}
+
+//..................................................................
+function useRouteLink(){
+
+    try{document.getElementById("inputLocation").value = urlParams.get("inputLocation");} catch(err){console.log("No inputLocation");}
+    try{document.getElementById("inputDist").value = urlParams.get("inputDist");} catch(err){console.log("No inputDist");}
+    try{document.getElementById("inputUnits").value = urlParams.get("inputUnits");} catch(err){console.log("No inputUnits");}
+    try{document.getElementById("inputMode").value = urlParams.get("inputMode");} catch(err){console.log("No inputMode");}
+    try{document.getElementById("fitnessLevel").value = urlParams.get("fitnessLevel");} catch(err){console.log("No fitnessLevel");}
+    try{document.getElementById("greenFactor").value = urlParams.get("greenFactor");} catch(err){console.log("No greenFactor");}
+    try{document.getElementById("quietFactor").value = urlParams.get("quietFactor");} catch(err){console.log("No quietFactor");}
+    try{document.getElementById("inputRotation").value = urlParams.get("inputRotation");} catch(err){console.log("No inputRotation");}
+    try{document.getElementById("inputDirection").value = urlParams.get("inputDirection");} catch(err){console.log("No inputDirection");}
+    try{document.getElementById("method").value = urlParams.get("method");} catch(err){console.log("No method");}
+    try{document.getElementById("inputHighways").value = urlParams.get("inputHighways");} catch(err){console.log("No inputHighways");}
+    try{document.getElementById("inputFerries").value = urlParams.get("inputFerries");} catch(err){console.log("No inputFerries");}
+    var waypoints = [];
+    var pts = [];
+    if (urlParams.has("waypoints")){
+	pts = urlParams.get("waypoints");
+	pts = pts.split("|");
+	for (item of pts){
+	    var pair = item.split(",");
+	    waypoints.push({lat:pair[0],lng:pair[1]});
+	}
+    }
+
+    doRL(waypoints);
+
+    return;
 }

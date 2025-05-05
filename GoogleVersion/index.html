@@ -26,7 +26,7 @@
   </head>  
   <body onload="initMap()">
     <div id="inputs">
-      Location: <input type="text" value="Wellesley MA, 02482 USA" id="inputLocation" size="40"/>
+      Location: <input type="text" value="Wellesley MA, 02482 USA" id="inputLocation" size="40" onchange="setAsHome()"/>
       Dist: <input type="text" value="10" id="inputDist" size="3"/>
       <!--Units:-->
       <select id="inputUnits">
@@ -96,6 +96,7 @@
 	<option value="tcx">TCX</option>
 	<option value="garmin">Upload to Garmin Connect</option>
 	<option value="google">Show on Google Maps</option>
+	<option value="link">Link</option>
       </select>
       <style> 
 	img:hover
