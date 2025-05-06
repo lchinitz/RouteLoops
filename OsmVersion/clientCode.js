@@ -853,18 +853,24 @@ function saveConfiguration(){
 //..................................................................
 function useRouteLink(){
 
-    try{document.getElementById("inputLocation").value = urlParams.get("inputLocation");} catch(err){console.log("No inputLocation");}
-    try{document.getElementById("inputDist").value = urlParams.get("inputDist");} catch(err){console.log("No inputDist");}
-    try{document.getElementById("inputUnits").value = urlParams.get("inputUnits");} catch(err){console.log("No inputUnits");}
-    try{document.getElementById("inputMode").value = urlParams.get("inputMode");} catch(err){console.log("No inputMode");}
-    try{document.getElementById("fitnessLevel").value = urlParams.get("fitnessLevel");} catch(err){console.log("No fitnessLevel");}
-    try{document.getElementById("greenFactor").value = urlParams.get("greenFactor");} catch(err){console.log("No greenFactor");}
-    try{document.getElementById("quietFactor").value = urlParams.get("quietFactor");} catch(err){console.log("No quietFactor");}
-    try{document.getElementById("inputRotation").value = urlParams.get("inputRotation");} catch(err){console.log("No inputRotation");}
-    try{document.getElementById("inputDirection").value = urlParams.get("inputDirection");} catch(err){console.log("No inputDirection");}
-    try{document.getElementById("method").value = urlParams.get("method");} catch(err){console.log("No method");}
-    try{document.getElementById("inputHighways").value = urlParams.get("inputHighways");} catch(err){console.log("No inputHighways");}
-    try{document.getElementById("inputFerries").value = urlParams.get("inputFerries");} catch(err){console.log("No inputFerries");}
+    if (urlParams.has("inputLocation")) document.getElementById("inputLocation").value = urlParams.get("inputLocation");
+    if (urlParams.has("inputDist"))     document.getElementById("inputDist").value = urlParams.get("inputDist");
+    if (urlParams.has("inputUnits"))    document.getElementById("inputUnits").value = urlParams.get("inputUnits");
+    if (urlParams.has("inputMode")){
+	var useMode = "cycling-road";
+	if (urlParams.get("inputMode").toLowerCase().indexOf("driv")>=0) useMode = "driving-car";
+	if (urlParams.get("inputMode").toLowerCase().indexOf("walk")>=0) useMode = "foot-walking";
+	if (urlParams.get("inputMode").toLowerCase().indexOf("hik")>=0) useMode = "foot-hiking";
+	document.getElementById("inputMode").value = useMode;
+    }
+    if (urlParams.has("fitnessLevel")) document.getElementById("fitnessLevel").value = urlParams.get("fitnessLevel");
+    if (urlParams.has("greenFactor"))  document.getElementById("greenFactor").value = urlParams.get("greenFactor");
+    if (urlParams.has("quietFactor"))  document.getElementById("quietFactor").value = urlParams.get("quietFactor");
+    if (urlParams.has("inputRotation")) document.getElementById("inputRotation").value = urlParams.get("inputRotation");
+    if (urlParams.has("inputDirection")) document.getElementById("inputDirection").value = urlParams.get("inputDirection");
+    if (urlParams.has("method"))       document.getElementById("method").value = urlParams.get("method");
+    if (urlParams.has("inputHighways")) document.getElementById("inputHighways").value = urlParams.get("inputHighways");
+    if (urlParams.has("inputFerries"))  document.getElementById("inputFerries").value = urlParams.get("inputFerries");
     var waypoints = [];
     var pts = [];
     if (urlParams.has("waypoints")){
